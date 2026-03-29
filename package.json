@@ -1,7 +1,7 @@
 {
-  "name": "p2p-file-transfer",
-  "version": "1.0.0",
-  "description": "P2P file transfer via browser",
+  "name": "file-transfer-hub",
+  "version": "2.0.0",
+  "description": "Multi-device file transfer system",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
