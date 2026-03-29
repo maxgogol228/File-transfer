@@ -6,28 +6,62 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: { origin: "*" },
-  maxHttpBufferSize: 1e8 // 100MB
+  maxHttpBufferSize: 1e8
 });
 
 app.use(express.static('public'));
 
 const rooms = new Map();
+const ROOM_LIFETIME_MS = 60 * 60 * 1000; // 1 hour
+
+// Cleanup expired rooms periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [roomKey, room] of rooms.entries()) {
+    if (room.expiresAt && now > room.expiresAt) {
+      console.log(`Room ${roomKey} expired and will be deleted`);
+      io.to(roomKey).emit('room-expired', { message: 'Room has expired (1 hour limit)' });
+      rooms.delete(roomKey);
+    }
+  }
+}, 60000); // Check every minute
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
   socket.on('join-room', (roomKey, callback) => {
+    const now = Date.now();
+    
     if (!rooms.has(roomKey)) {
+      // Create new room with expiration
       rooms.set(roomKey, {
         clients: new Set([socket.id]),
-        files: new Map()
+        files: new Map(),
+        createdAt: now,
+        expiresAt: now + ROOM_LIFETIME_MS,
+        messages: [] // Store chat messages
       });
       socket.join(roomKey);
       socket.data.roomKey = roomKey;
-      callback({ success: true, isCreator: true, clientsCount: 1, files: [] });
-      console.log(`Room ${roomKey} created`);
+      
+      callback({ 
+        success: true, 
+        isCreator: true, 
+        clientsCount: 1, 
+        files: [],
+        expiresIn: ROOM_LIFETIME_MS
+      });
+      console.log(`Room ${roomKey} created, expires in 1 hour`);
     } else {
       const room = rooms.get(roomKey);
+      
+      // Check if room expired
+      if (now > room.expiresAt) {
+        rooms.delete(roomKey);
+        callback({ success: false, error: 'Room expired' });
+        return;
+      }
+      
       room.clients.add(socket.id);
       socket.join(roomKey);
       socket.data.roomKey = roomKey;
@@ -39,13 +73,45 @@ io.on('connection', (socket) => {
         fileType: f.fileType
       }));
       
-      io.to(roomKey).emit('peer-joined', { clientsCount: room.clients.size });
-      callback({ success: true, isCreator: false, clientsCount: room.clients.size, files: existingFiles });
+      // Send chat history to new user
+      socket.emit('chat-history', room.messages);
+      
+      io.to(roomKey).emit('peer-joined', { 
+        clientsCount: room.clients.size,
+        message: `User joined the room`
+      });
+      
+      callback({ 
+        success: true, 
+        isCreator: false, 
+        clientsCount: room.clients.size, 
+        files: existingFiles,
+        expiresIn: room.expiresAt - now
+      });
       console.log(`${socket.id} joined room ${roomKey}`);
     }
   });
 
-  // Handle file upload with binary data
+  // Handle chat message
+  socket.on('chat-message', (data) => {
+    const roomKey = socket.data.roomKey;
+    if (roomKey && rooms.has(roomKey)) {
+      const room = rooms.get(roomKey);
+      const message = {
+        id: Date.now(),
+        userId: socket.id.slice(-6),
+        userName: data.userName || `User_${socket.id.slice(-4)}`,
+        message: data.message,
+        timestamp: new Date().toLocaleTimeString()
+      };
+      room.messages.push(message);
+      // Keep only last 100 messages
+      if (room.messages.length > 100) room.messages.shift();
+      
+      io.to(roomKey).emit('chat-message', message);
+    }
+  });
+
   socket.on('file-upload-start', (data) => {
     const roomKey = socket.data.roomKey;
     if (!roomKey || !rooms.has(roomKey)) return;
@@ -62,10 +128,9 @@ io.on('connection', (socket) => {
       senderId: socket.id
     });
     
-    console.log(`File upload started: ${data.fileName} (${data.fileSize} bytes)`);
+    console.log(`File upload started: ${data.fileName}`);
   });
 
-  // Receive binary chunks
   socket.on('file-chunk', (chunk, callback) => {
     const roomKey = socket.data.roomKey;
     if (!roomKey || !rooms.has(roomKey)) return;
@@ -75,15 +140,12 @@ io.on('connection', (socket) => {
     
     if (room.files.has(fileId)) {
       const fileData = room.files.get(fileId);
-      
-      // Convert ArrayBuffer to Buffer
       const buffer = Buffer.from(chunk.data);
       fileData.chunks.push(buffer);
       fileData.receivedSize += buffer.length;
       
       const progress = (fileData.receivedSize / fileData.fileSize) * 100;
       
-      // Broadcast progress to all clients in room
       io.to(roomKey).emit('upload-progress', {
         fileId: fileId,
         progress: progress,
@@ -92,7 +154,6 @@ io.on('connection', (socket) => {
       
       if (callback) callback({ success: true, progress: progress });
       
-      // If file is complete, notify all clients
       if (fileData.receivedSize >= fileData.fileSize) {
         console.log(`File complete: ${fileData.fileName}`);
         io.to(roomKey).emit('file-available', {
@@ -106,7 +167,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Download file
   socket.on('download-file', (data, callback) => {
     const roomKey = socket.data.roomKey;
     if (!roomKey || !rooms.has(roomKey)) {
@@ -122,7 +182,6 @@ io.on('connection', (socket) => {
       return;
     }
     
-    // Concatenate all chunks
     const fullBuffer = Buffer.concat(fileData.chunks);
     
     callback({
@@ -133,18 +192,33 @@ io.on('connection', (socket) => {
     });
   });
 
+  socket.on('get-room-info', (callback) => {
+    const roomKey = socket.data.roomKey;
+    if (roomKey && rooms.has(roomKey)) {
+      const room = rooms.get(roomKey);
+      callback({
+        clientsCount: room.clients.size,
+        expiresIn: room.expiresAt - Date.now(),
+        filesCount: room.files.size
+      });
+    }
+  });
+
   socket.on('leave-room', () => {
     const roomKey = socket.data.roomKey;
     if (roomKey && rooms.has(roomKey)) {
       const room = rooms.get(roomKey);
       room.clients.delete(socket.id);
       
-      socket.to(roomKey).emit('peer-left', { clientsCount: room.clients.size });
+      io.to(roomKey).emit('peer-left', { 
+        clientsCount: room.clients.size,
+        message: `User left the room`
+      });
       socket.leave(roomKey);
       
       if (room.clients.size === 0) {
         rooms.delete(roomKey);
-        console.log(`Room ${roomKey} deleted`);
+        console.log(`Room ${roomKey} deleted (empty)`);
       }
     }
   });
@@ -167,4 +241,5 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Room lifetime: 1 hour`);
 });
