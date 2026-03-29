@@ -14,57 +14,60 @@ app.use(express.static('public'));
 const rooms = new Map();
 const ROOM_LIFETIME_MS = 60 * 60 * 1000; // 1 hour
 
-// Cleanup expired rooms periodically
 setInterval(() => {
   const now = Date.now();
   for (const [roomKey, room] of rooms.entries()) {
     if (room.expiresAt && now > room.expiresAt) {
-      console.log(`Room ${roomKey} expired and will be deleted`);
+      console.log(`Room ${roomKey} expired`);
       io.to(roomKey).emit('room-expired', { message: 'Room has expired (1 hour limit)' });
       rooms.delete(roomKey);
     }
   }
-}, 60000); // Check every minute
+}, 60000);
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
-  socket.on('join-room', (roomKey, callback) => {
+  socket.on('join-room', (data, callback) => {
+    const { roomKey, userName } = data;
     const now = Date.now();
     
     if (!rooms.has(roomKey)) {
-      // Create new room with expiration
       rooms.set(roomKey, {
-        clients: new Set([socket.id]),
+        clients: new Map(), // socketId -> userName
         files: new Map(),
         createdAt: now,
         expiresAt: now + ROOM_LIFETIME_MS,
-        messages: [] // Store chat messages
+        messages: []
       });
+      const room = rooms.get(roomKey);
+      room.clients.set(socket.id, userName);
       socket.join(roomKey);
       socket.data.roomKey = roomKey;
+      socket.data.userName = userName;
       
       callback({ 
         success: true, 
         isCreator: true, 
         clientsCount: 1, 
         files: [],
-        expiresIn: ROOM_LIFETIME_MS
+        expiresIn: ROOM_LIFETIME_MS,
+        users: [{ id: socket.id, name: userName }]
       });
-      console.log(`Room ${roomKey} created, expires in 1 hour`);
+      console.log(`Room ${roomKey} created by ${userName}`);
     } else {
       const room = rooms.get(roomKey);
       
-      // Check if room expired
       if (now > room.expiresAt) {
         rooms.delete(roomKey);
         callback({ success: false, error: 'Room expired' });
         return;
       }
       
-      room.clients.add(socket.id);
+      room.clients.set(socket.id, userName);
       socket.join(roomKey);
       socket.data.roomKey = roomKey;
+      socket.data.userName = userName;
       
       const existingFiles = Array.from(room.files.values()).map(f => ({
         fileId: f.fileId,
@@ -73,12 +76,14 @@ io.on('connection', (socket) => {
         fileType: f.fileType
       }));
       
-      // Send chat history to new user
       socket.emit('chat-history', room.messages);
+      
+      const usersList = Array.from(room.clients.entries()).map(([id, name]) => ({ id, name }));
       
       io.to(roomKey).emit('peer-joined', { 
         clientsCount: room.clients.size,
-        message: `User joined the room`
+        users: usersList,
+        message: `${userName} joined the room`
       });
       
       callback({ 
@@ -86,26 +91,25 @@ io.on('connection', (socket) => {
         isCreator: false, 
         clientsCount: room.clients.size, 
         files: existingFiles,
-        expiresIn: room.expiresAt - now
+        expiresIn: room.expiresAt - now,
+        users: usersList
       });
-      console.log(`${socket.id} joined room ${roomKey}`);
+      console.log(`${userName} joined room ${roomKey}`);
     }
   });
 
-  // Handle chat message
   socket.on('chat-message', (data) => {
     const roomKey = socket.data.roomKey;
     if (roomKey && rooms.has(roomKey)) {
       const room = rooms.get(roomKey);
       const message = {
         id: Date.now(),
-        userId: socket.id.slice(-6),
-        userName: data.userName || `User_${socket.id.slice(-4)}`,
+        userName: socket.data.userName,
+        userId: socket.id,
         message: data.message,
-        timestamp: new Date().toLocaleTimeString()
+        timestamp: new Date().toISOString()
       };
       room.messages.push(message);
-      // Keep only last 100 messages
       if (room.messages.length > 100) room.messages.shift();
       
       io.to(roomKey).emit('chat-message', message);
@@ -125,10 +129,11 @@ io.on('connection', (socket) => {
       fileType: data.fileType,
       chunks: [],
       receivedSize: 0,
-      senderId: socket.id
+      senderId: socket.id,
+      senderName: socket.data.userName
     });
     
-    console.log(`File upload started: ${data.fileName}`);
+    console.log(`File upload started: ${data.fileName} by ${socket.data.userName}`);
   });
 
   socket.on('file-chunk', (chunk, callback) => {
@@ -161,7 +166,8 @@ io.on('connection', (socket) => {
           fileName: fileData.fileName,
           fileSize: fileData.fileSize,
           fileType: fileData.fileType,
-          senderId: socket.id
+          senderId: socket.id,
+          senderName: socket.data.userName
         });
       }
     }
@@ -208,17 +214,21 @@ io.on('connection', (socket) => {
     const roomKey = socket.data.roomKey;
     if (roomKey && rooms.has(roomKey)) {
       const room = rooms.get(roomKey);
+      const userName = socket.data.userName;
       room.clients.delete(socket.id);
+      
+      const usersList = Array.from(room.clients.entries()).map(([id, name]) => ({ id, name }));
       
       io.to(roomKey).emit('peer-left', { 
         clientsCount: room.clients.size,
-        message: `User left the room`
+        users: usersList,
+        message: `${userName} left the room`
       });
       socket.leave(roomKey);
       
       if (room.clients.size === 0) {
         rooms.delete(roomKey);
-        console.log(`Room ${roomKey} deleted (empty)`);
+        console.log(`Room ${roomKey} deleted`);
       }
     }
   });
@@ -227,11 +237,19 @@ io.on('connection', (socket) => {
     const roomKey = socket.data.roomKey;
     if (roomKey && rooms.has(roomKey)) {
       const room = rooms.get(roomKey);
+      const userName = socket.data.userName;
       room.clients.delete(socket.id);
       
       if (room.clients.size === 0) {
         rooms.delete(roomKey);
-        console.log(`Room ${roomKey} deleted (disconnect)`);
+        console.log(`Room ${roomKey} deleted`);
+      } else {
+        const usersList = Array.from(room.clients.entries()).map(([id, name]) => ({ id, name }));
+        io.to(roomKey).emit('peer-left', { 
+          clientsCount: room.clients.size,
+          users: usersList,
+          message: `${userName} disconnected`
+        });
       }
     }
     console.log('Client disconnected:', socket.id);
