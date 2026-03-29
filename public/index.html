@@ -16,25 +16,164 @@
             background: #0a0e27;
             min-height: 100vh;
             color: #e0e0e0;
-            -webkit-tap-highlight-color: transparent;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
+        .app-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
             padding: 20px;
+        }
+
+        .chat-sidebar {
+            width: 320px;
+            background: #0f1535;
+            border-left: 1px solid #1e2a4a;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .chat-header {
+            padding: 20px;
+            border-bottom: 1px solid #1e2a4a;
+            background: #0a0e27;
+        }
+
+        .chat-header h3 {
+            color: #4f9eff;
+            font-size: 1.1rem;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chat-message {
+            background: #0a0e27;
+            border-radius: 12px;
+            padding: 10px 12px;
+            max-width: 85%;
+        }
+
+        .chat-message.own {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #4f9eff, #7c3aed);
+        }
+
+        .message-sender {
+            font-size: 0.7rem;
+            color: #9ca3af;
+            margin-bottom: 4px;
+        }
+
+        .chat-message.own .message-sender {
+            color: #c7d2fe;
+        }
+
+        .message-text {
+            font-size: 0.9rem;
+            word-break: break-word;
+        }
+
+        .message-time {
+            font-size: 0.65rem;
+            color: #6b7280;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .chat-input-area {
+            padding: 16px;
+            border-top: 1px solid #1e2a4a;
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 12px;
+            background: #0a0e27;
+            border: 1px solid #1e2a4a;
+            border-radius: 24px;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+        }
+
+        .chat-input-area input:focus {
+            outline: none;
+            border-color: #4f9eff;
+        }
+
+        .chat-input-area button {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #4f9eff, #7c3aed);
+            border: none;
+            border-radius: 24px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .room-timer {
+            background: #1e2a4a;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-family: monospace;
+        }
+
+        .room-timer.warning {
+            background: #dc2626;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .chat-sidebar {
+                width: 100%;
+                height: 300px;
+                border-left: none;
+                border-top: 1px solid #1e2a4a;
+            }
+            
+            .main-content {
+                height: calc(100vh - 300px);
+            }
+        }
+
+        /* Rest of styles from previous version */
+        .container {
+            max-width: 100%;
         }
 
         .header {
             text-align: center;
-            padding: 30px 20px;
+            padding: 20px;
             background: linear-gradient(135deg, #0f1535 0%, #0a0e27 100%);
             border-bottom: 1px solid #1e2a4a;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
         .header h1 {
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             font-weight: 600;
             background: linear-gradient(135deg, #4f9eff, #7c3aed);
             -webkit-background-clip: text;
@@ -48,11 +187,10 @@
             padding: 20px;
             margin-bottom: 20px;
             border: 1px solid #1e2a4a;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
         .card h2 {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             margin-bottom: 16px;
             color: #4f9eff;
         }
@@ -71,18 +209,10 @@
             border-radius: 12px;
             color: #e0e0e0;
             font-size: 1rem;
-            transition: all 0.3s;
-            -webkit-appearance: none;
-        }
-
-        .input-group input:focus {
-            outline: none;
-            border-color: #4f9eff;
-            box-shadow: 0 0 0 2px rgba(79, 158, 255, 0.1);
         }
 
         .btn {
-            padding: 14px 24px;
+            padding: 12px 24px;
             background: #1e2a4a;
             border: none;
             border-radius: 12px;
@@ -91,7 +221,6 @@
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s;
-            -webkit-tap-highlight-color: transparent;
         }
 
         .btn-primary {
@@ -99,16 +228,8 @@
             color: white;
         }
 
-        .btn-primary:active {
-            transform: scale(0.98);
-        }
-
         .btn-danger {
             background: #dc2626;
-        }
-
-        .btn-danger:active {
-            transform: scale(0.98);
         }
 
         .btn-success {
@@ -116,14 +237,8 @@
         }
 
         .btn-sm {
-            padding: 10px 16px;
+            padding: 8px 12px;
             font-size: 0.85rem;
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
         }
 
         .status {
@@ -133,55 +248,23 @@
             font-size: 0.9rem;
         }
 
-        .status-info {
-            background: #1e2a4a;
-            color: #4f9eff;
-            border-left: 3px solid #4f9eff;
-        }
-
-        .status-success {
-            background: #064e3b;
-            color: #10b981;
-            border-left: 3px solid #10b981;
-        }
-
-        .status-error {
-            background: #7f1d1d;
-            color: #f87171;
-            border-left: 3px solid #dc2626;
-        }
+        .status-info { background: #1e2a4a; color: #4f9eff; border-left: 3px solid #4f9eff; }
+        .status-success { background: #064e3b; color: #10b981; border-left: 3px solid #10b981; }
+        .status-error { background: #7f1d1d; color: #f87171; border-left: 3px solid #dc2626; }
 
         .drop-zone {
             border: 2px dashed #1e2a4a;
             border-radius: 12px;
-            padding: 30px 20px;
+            padding: 30px;
             text-align: center;
             background: #0a0e27;
-            transition: all 0.3s;
             cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .drop-zone:active {
-            background: #0f1535;
-        }
-
-        .drop-zone.drag-over {
-            border-color: #4f9eff;
-            background: #0f1535;
-        }
-
-        .drop-zone p {
-            color: #6b7280;
-            margin-top: 12px;
-            font-size: 0.9rem;
         }
 
         .file-list {
             margin-top: 16px;
-            max-height: 400px;
+            max-height: 300px;
             overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
         }
 
         .file-item {
@@ -192,15 +275,9 @@
             margin-bottom: 8px;
         }
 
-        .file-info {
-            margin-bottom: 8px;
-        }
-
         .file-name {
             font-weight: 500;
-            margin-bottom: 4px;
             word-break: break-word;
-            font-size: 0.95rem;
         }
 
         .file-size {
@@ -221,14 +298,6 @@
             height: 100%;
             background: linear-gradient(90deg, #4f9eff, #7c3aed);
             transition: width 0.3s ease;
-            width: 0%;
-        }
-
-        .file-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-            flex-wrap: wrap;
         }
 
         .room-header {
@@ -242,21 +311,12 @@
 
         .room-key {
             font-family: monospace;
-            font-size: 1.2rem;
-            font-weight: bold;
+            font-size: 1.1rem;
             background: #0a0e27;
             padding: 8px 12px;
             border-radius: 8px;
             border: 1px solid #4f9eff;
             color: #4f9eff;
-            word-break: break-all;
-        }
-
-        .peer-count {
-            background: #1e2a4a;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.85rem;
         }
 
         .tabs {
@@ -264,20 +324,14 @@
             gap: 4px;
             margin-bottom: 20px;
             border-bottom: 1px solid #1e2a4a;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
         }
 
         .tab {
-            padding: 12px 20px;
+            padding: 10px 16px;
             background: none;
             border: none;
             color: #9ca3af;
             cursor: pointer;
-            transition: all 0.3s;
-            font-size: 0.95rem;
-            white-space: nowrap;
-            -webkit-tap-highlight-color: transparent;
         }
 
         .tab.active {
@@ -285,134 +339,88 @@
             border-bottom: 2px solid #4f9eff;
         }
 
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .upload-status {
-            font-size: 0.8rem;
-            color: #10b981;
-            margin-top: 4px;
-        }
-
-        .mobile-share {
-            background: #1e2a4a;
-            border-radius: 8px;
-            padding: 8px;
-            margin-top: 8px;
-            font-size: 0.75rem;
-            color: #9ca3af;
-            text-align: center;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 12px;
-            }
-            
-            .header {
-                padding: 20px 16px;
-                margin-bottom: 20px;
-            }
-            
-            .header h1 {
-                font-size: 1.5rem;
-            }
-            
-            .card {
-                padding: 16px;
-                margin-bottom: 16px;
-            }
-            
-            .card h2 {
-                font-size: 1.1rem;
-            }
-            
-            .room-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .btn {
-                padding: 12px 20px;
-            }
-            
-            .btn-sm {
-                padding: 8px 12px;
-            }
-        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>FILE TRANSFER HUB</h1>
-    </div>
+    <div class="app-container">
+        <div class="main-content">
+            <div class="container">
+                <div class="header">
+                    <h1>FILE TRANSFER HUB</h1>
+                </div>
 
-    <div class="container">
-        <div id="connectionPanel" class="card">
-            <h2>Connect to Room</h2>
-            <div class="input-group">
-                <input type="text" id="roomKeyInput" placeholder="Enter room key" maxlength="20" autocomplete="off">
-                <button id="connectBtn" class="btn btn-primary">Join / Create</button>
+                <div id="connectionPanel" class="card">
+                    <h2>Connect to Room</h2>
+                    <div class="input-group">
+                        <input type="text" id="roomKeyInput" placeholder="Enter room key" maxlength="20">
+                        <button id="connectBtn" class="btn btn-primary">Join / Create</button>
+                    </div>
+                    <div id="connectionStatus"></div>
+                </div>
+
+                <div id="mainInterface" style="display: none;">
+                    <div class="card">
+                        <div class="room-header">
+                            <div>
+                                <div style="font-size: 0.75rem; color: #6b7280;">Room Key</div>
+                                <div class="room-key" id="currentRoomKey"></div>
+                            </div>
+                            <div class="peer-count" id="peerCount">Devices: 1</div>
+                            <div class="room-timer" id="roomTimer">Expires: --:--</div>
+                            <button id="leaveRoomBtn" class="btn btn-danger">Leave</button>
+                        </div>
+                    </div>
+
+                    <div class="tabs">
+                        <button class="tab active" data-tab="send">Send Files</button>
+                        <button class="tab" data-tab="received">Received Files</button>
+                    </div>
+
+                    <div id="sendTab" class="tab-content active">
+                        <div class="card">
+                            <h2>Drop or Select Files</h2>
+                            <div id="dropZone" class="drop-zone">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 3v12m0 0-3-3m3 3 3-3M5 17h14a2 2 0 0 1 2 2v2H3v-2a2 2 0 0 1 2-2z"/>
+                                </svg>
+                                <p>Tap or drag files here</p>
+                            </div>
+                            <input type="file" id="fileInput" multiple style="display: none;">
+                        </div>
+
+                        <div class="card">
+                            <h2>My Uploads</h2>
+                            <div id="uploadsList" class="file-list">No uploads</div>
+                        </div>
+
+                        <div class="card">
+                            <h2>Available Files</h2>
+                            <div id="availableFiles" class="file-list">No shared files</div>
+                        </div>
+                    </div>
+
+                    <div id="receivedTab" class="tab-content">
+                        <div class="card">
+                            <h2>Downloaded Files</h2>
+                            <div id="receivedFiles" class="file-list">No files downloaded yet</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div id="connectionStatus"></div>
         </div>
 
-        <div id="mainInterface" style="display: none;">
-            <div class="card">
-                <div class="room-header">
-                    <div style="flex: 1">
-                        <div style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">Room Key</div>
-                        <div class="room-key" id="currentRoomKey"></div>
-                    </div>
-                    <div class="peer-count" id="peerCount">Devices: 1</div>
-                    <button id="leaveRoomBtn" class="btn btn-danger">Leave</button>
-                </div>
+        <div class="chat-sidebar" id="chatSidebar" style="display: none;">
+            <div class="chat-header">
+                <h3>Room Chat</h3>
             </div>
-
-            <div class="tabs">
-                <button class="tab active" data-tab="send">Send Files</button>
-                <button class="tab" data-tab="received">Received Files</button>
+            <div class="chat-messages" id="chatMessages">
+                <div style="text-align: center; color: #6b7280; padding: 20px;">Join a room to start chatting</div>
             </div>
-
-            <div id="sendTab" class="tab-content active">
-                <div class="card">
-                    <h2>Drop or Select Files</h2>
-                    <div id="dropZone" class="drop-zone">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 3v12m0 0-3-3m3 3 3-3M5 17h14a2 2 0 0 1 2 2v2H3v-2a2 2 0 0 1 2-2z"/>
-                        </svg>
-                        <p>Tap or drag files here</p>
-                    </div>
-                    <input type="file" id="fileInput" multiple style="display: none;">
-                </div>
-
-                <div class="card">
-                    <h2>My Uploads</h2>
-                    <div id="uploadsList" class="file-list">
-                        <div style="text-align: center; color: #6b7280; padding: 20px;">No uploads</div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2>Available Files</h2>
-                    <div id="availableFiles" class="file-list">
-                        <div style="text-align: center; color: #6b7280; padding: 20px;">No shared files</div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="receivedTab" class="tab-content">
-                <div class="card">
-                    <h2>Downloaded Files</h2>
-                    <div id="receivedFiles" class="file-list">
-                        <div style="text-align: center; color: #6b7280; padding: 20px;">No files downloaded yet</div>
-                    </div>
-                </div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="Type a message..." maxlength="200">
+                <button id="sendChatBtn">Send</button>
             </div>
         </div>
     </div>
@@ -424,6 +432,8 @@
         let myUploads = new Map();
         let roomFiles = new Map();
         let downloadedFiles = [];
+        let userName = localStorage.getItem('chatUserName') || `User_${Math.random().toString(36).substr(2, 4)}`;
+        let timerInterval = null;
         const CHUNK_SIZE = 16384;
 
         const connectBtn = document.getElementById('connectBtn');
@@ -439,6 +449,11 @@
         const uploadsList = document.getElementById('uploadsList');
         const availableFilesDiv = document.getElementById('availableFiles');
         const receivedFilesDiv = document.getElementById('receivedFiles');
+        const chatSidebar = document.getElementById('chatSidebar');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendChatBtn = document.getElementById('sendChatBtn');
+        const roomTimer = document.getElementById('roomTimer');
 
         function initSocket() {
             socket = io();
@@ -450,12 +465,20 @@
 
             socket.on('peer-joined', (data) => {
                 updatePeerCount(data.clientsCount);
-                addSystemMessage('Device joined the room', 'info');
+                addChatMessage({ userName: 'System', message: data.message || 'User joined the room', isSystem: true });
             });
 
             socket.on('peer-left', (data) => {
                 updatePeerCount(data.clientsCount);
-                addSystemMessage('Device left the room', 'info');
+                addChatMessage({ userName: 'System', message: data.message || 'User left the room', isSystem: true });
+            });
+
+            socket.on('chat-message', (message) => {
+                addChatMessage(message);
+            });
+
+            socket.on('chat-history', (messages) => {
+                messages.forEach(msg => addChatMessage(msg));
             });
 
             socket.on('file-available', (data) => {
@@ -463,6 +486,7 @@
                     roomFiles.set(data.fileId, data);
                     renderAvailableFiles();
                     showStatus(`New file: ${data.fileName}`, 'success');
+                    addChatMessage({ userName: 'System', message: `New file available: ${data.fileName}`, isSystem: true });
                 }
             });
 
@@ -470,12 +494,18 @@
                 if (myUploads.has(data.fileId)) {
                     const upload = myUploads.get(data.fileId);
                     upload.progress = data.progress;
-                    if (data.progress >= 100) {
-                        upload.status = 'complete';
-                        showStatus(`Upload complete: ${upload.fileName}`, 'success');
-                    }
+                    if (data.progress >= 100) upload.status = 'complete';
                     renderUploadsList();
                 }
+            });
+
+            socket.on('room-expired', (data) => {
+                showStatus(data.message, 'error');
+                setTimeout(() => {
+                    if (socket && currentRoomKey) {
+                        leaveRoom();
+                    }
+                }, 3000);
             });
         }
 
@@ -504,24 +534,90 @@
                     updatePeerCount(response.clientsCount);
                     
                     if (response.files && response.files.length > 0) {
-                        response.files.forEach(file => {
-                            roomFiles.set(file.fileId, file);
-                        });
+                        response.files.forEach(file => roomFiles.set(file.fileId, file));
                         renderAvailableFiles();
                     }
                     
                     connectionPanel.style.display = 'none';
                     mainInterface.style.display = 'block';
+                    chatSidebar.style.display = 'flex';
                     
                     showStatus(`Connected to: ${roomKey}`, 'success');
                     setupFileTransfer();
+                    startTimer(response.expiresIn);
+                    
+                    // Announce user join via chat
+                    setTimeout(() => {
+                        sendChatMessage(`${userName} joined the room`);
+                    }, 500);
+                } else if (response.error === 'Room expired') {
+                    showStatus('Room has expired (1 hour limit). Create a new room.', 'error');
                 } else {
                     showStatus('Failed to connect', 'error');
                 }
             });
         }
 
-        leaveRoomBtn.onclick = () => {
+        function startTimer(expiresInMs) {
+            if (timerInterval) clearInterval(timerInterval);
+            
+            const updateTimer = () => {
+                if (!currentRoomKey) return;
+                socket.emit('get-room-info', (info) => {
+                    if (info && info.expiresIn) {
+                        const remaining = info.expiresIn;
+                        if (remaining <= 0) {
+                            roomTimer.textContent = 'Expired';
+                            roomTimer.classList.add('warning');
+                            if (timerInterval) clearInterval(timerInterval);
+                        } else {
+                            const minutes = Math.floor(remaining / 60000);
+                            const seconds = Math.floor((remaining % 60000) / 1000);
+                            roomTimer.textContent = `Expires: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                            if (remaining < 300000) { // Less than 5 minutes
+                                roomTimer.classList.add('warning');
+                            }
+                        }
+                    }
+                });
+            };
+            
+            updateTimer();
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function sendChatMessage(message) {
+            if (!socket || !currentRoomKey) return;
+            socket.emit('chat-message', {
+                userName: userName,
+                message: message
+            });
+        }
+
+        function addChatMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message';
+            if (!message.isSystem && message.userId === socket?.id?.slice(-6)) {
+                messageDiv.classList.add('own');
+            }
+            
+            const sender = message.isSystem ? 'System' : (message.userName || 'User');
+            messageDiv.innerHTML = `
+                <div class="message-sender">${escapeHtml(sender)}</div>
+                <div class="message-text">${escapeHtml(message.message)}</div>
+                <div class="message-time">${message.timestamp || new Date().toLocaleTimeString()}</div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Keep only last 100 messages in DOM
+            while (chatMessages.children.length > 100) {
+                chatMessages.removeChild(chatMessages.firstChild);
+            }
+        }
+
+        function leaveRoom() {
             if (socket && currentRoomKey) {
                 socket.emit('leave-room');
                 socket.disconnect();
@@ -531,89 +627,67 @@
                 roomFiles.clear();
                 downloadedFiles = [];
                 
+                if (timerInterval) clearInterval(timerInterval);
+                
                 connectionPanel.style.display = 'block';
                 mainInterface.style.display = 'none';
+                chatSidebar.style.display = 'none';
                 roomKeyInput.value = '';
+                chatMessages.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">Join a room to start chatting</div>';
                 
                 showStatus('Left the room', 'info');
                 initSocket();
             }
-        };
+        }
+
+        leaveRoomBtn.onclick = leaveRoom;
 
         function setupFileTransfer() {
             dropZone.onclick = () => fileInput.click();
-            
-            dropZone.ondragover = (e) => {
-                e.preventDefault();
-                dropZone.classList.add('drag-over');
-            };
-            
-            dropZone.ondragleave = () => {
-                dropZone.classList.remove('drag-over');
-            };
-            
+            dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); };
+            dropZone.ondragleave = () => dropZone.classList.remove('drag-over');
             dropZone.ondrop = (e) => {
                 e.preventDefault();
                 dropZone.classList.remove('drag-over');
-                const files = Array.from(e.dataTransfer.files);
-                if (files.length > 0) uploadFiles(files);
+                uploadFiles(Array.from(e.dataTransfer.files));
             };
-            
             fileInput.onchange = (e) => {
-                const files = Array.from(e.target.files);
-                if (files.length > 0) uploadFiles(files);
+                uploadFiles(Array.from(e.target.files));
                 fileInput.value = '';
             };
+            
+            sendChatBtn.onclick = () => {
+                const msg = chatInput.value.trim();
+                if (msg) {
+                    sendChatMessage(msg);
+                    chatInput.value = '';
+                }
+            };
+            chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendChatBtn.click(); };
         }
 
         async function uploadFiles(files) {
             for (let file of files) {
                 const fileId = generateFileId();
-                
-                myUploads.set(fileId, {
-                    id: fileId,
-                    fileName: file.name,
-                    fileSize: file.size,
-                    progress: 0,
-                    status: 'uploading'
-                });
+                myUploads.set(fileId, { id: fileId, fileName: file.name, fileSize: file.size, progress: 0, status: 'uploading' });
                 renderUploadsList();
-                
-                socket.emit('file-upload-start', {
-                    fileId: fileId,
-                    fileName: file.name,
-                    fileSize: file.size,
-                    fileType: file.type
-                });
-                
+                socket.emit('file-upload-start', { fileId, fileName: file.name, fileSize: file.size, fileType: file.type });
                 await uploadFileChunks(fileId, file);
             }
         }
 
         async function uploadFileChunks(fileId, file) {
             const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-            
             for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
                 const start = chunkIndex * CHUNK_SIZE;
                 const end = Math.min(start + CHUNK_SIZE, file.size);
-                const chunkBlob = file.slice(start, end);
-                const arrayBuffer = await readChunk(chunkBlob);
-                
-                socket.emit('file-chunk', {
-                    fileId: fileId,
-                    data: arrayBuffer,
-                    chunkIndex: chunkIndex,
-                    totalChunks: totalChunks
-                }, (response) => {
-                    if (response && response.success) {
-                        const upload = myUploads.get(fileId);
-                        if (upload) {
-                            upload.progress = response.progress;
-                            renderUploadsList();
-                        }
+                const arrayBuffer = await readChunk(file.slice(start, end));
+                socket.emit('file-chunk', { fileId, data: arrayBuffer, chunkIndex, totalChunks }, (response) => {
+                    if (response?.success && myUploads.has(fileId)) {
+                        myUploads.get(fileId).progress = response.progress;
+                        renderUploadsList();
                     }
                 });
-                
                 await new Promise(resolve => setTimeout(resolve, 5));
             }
         }
@@ -629,228 +703,68 @@
 
         function downloadFile(fileId, fileName) {
             showStatus(`Downloading ${fileName}...`, 'info');
-            
-            socket.emit('download-file', { fileId: fileId }, (response) => {
+            socket.emit('download-file', { fileId }, (response) => {
                 if (response.success) {
                     const binaryString = atob(response.fileData);
                     const bytes = new Uint8Array(binaryString.length);
-                    for (let i = 0; i < binaryString.length; i++) {
-                        bytes[i] = binaryString.charCodeAt(i);
-                    }
+                    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
                     const blob = new Blob([bytes]);
                     const url = URL.createObjectURL(blob);
-                    
-                    const fileObj = {
-                        id: fileId,
-                        name: response.fileName,
-                        url: url,
-                        size: response.fileSize
-                    };
-                    
-                    downloadedFiles.push(fileObj);
+                    downloadedFiles.push({ id: fileId, name: response.fileName, url, size: response.fileSize });
                     renderReceivedFiles();
                     showStatus(`Download complete: ${response.fileName}`, 'success');
                     
-                    // Save file (works on mobile)
-                    saveFileOnMobile(url, response.fileName);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = response.fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    setTimeout(() => document.body.removeChild(link), 100);
                 } else {
                     showStatus(`Download failed: ${response.error}`, 'error');
                 }
             });
         }
 
-        function saveFileOnMobile(url, filename) {
-            // Method 1: Create link and trigger click
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            
-            // For mobile, we need user interaction
-            // Show dialog with options
-            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-                // Mobile device - show save dialog
-                const shouldSave = confirm(`Save "${filename}"?\n\nFile size: ${formatBytes(responseSize || blob.size)}\n\nClick OK to save or Cancel to view in browser.`);
-                if (shouldSave) {
-                    link.click();
-                } else {
-                    window.open(url, '_blank');
-                }
-            } else {
-                link.click();
-            }
-            
-            setTimeout(() => {
-                document.body.removeChild(link);
-            }, 100);
-        }
-
         function renderUploadsList() {
-            if (myUploads.size === 0) {
-                uploadsList.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No uploads</div>';
-                return;
-            }
-            
-            uploadsList.innerHTML = Array.from(myUploads.values()).map(upload => `
+            if (myUploads.size === 0) { uploadsList.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No uploads</div>'; return; }
+            uploadsList.innerHTML = Array.from(myUploads.values()).map(u => `
                 <div class="file-item">
-                    <div class="file-info">
-                        <div class="file-name">${escapeHtml(upload.fileName)}</div>
-                        <div class="file-size">${formatBytes(upload.fileSize)}</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${upload.progress}%"></div>
-                        </div>
-                        <div class="upload-status">
-                            ${upload.status === 'uploading' ? `Uploading: ${Math.round(upload.progress)}%` : 'Upload complete'}
-                        </div>
-                    </div>
+                    <div class="file-name">${escapeHtml(u.fileName)}</div>
+                    <div class="file-size">${formatBytes(u.fileSize)}</div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: ${u.progress}%"></div></div>
+                    <div>${u.status === 'uploading' ? `${Math.round(u.progress)}%` : 'Complete'}</div>
                 </div>
             `).join('');
         }
 
         function renderAvailableFiles() {
             const files = Array.from(roomFiles.values());
-            if (files.length === 0) {
-                availableFilesDiv.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No shared files</div>';
-                return;
-            }
-            
-            availableFilesDiv.innerHTML = files.map(file => `
+            if (files.length === 0) { availableFilesDiv.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No shared files</div>'; return; }
+            availableFilesDiv.innerHTML = files.map(f => `
                 <div class="file-item">
-                    <div class="file-info">
-                        <div class="file-name">${escapeHtml(file.fileName)}</div>
-                        <div class="file-size">${formatBytes(file.fileSize)}</div>
-                    </div>
-                    <div class="file-actions">
-                        <button class="btn btn-primary btn-sm" onclick="window.downloadFileById('${file.fileId}', '${escapeHtml(file.fileName)}', ${file.fileSize})">
-                            Download
-                        </button>
-                    </div>
+                    <div class="file-name">${escapeHtml(f.fileName)}</div>
+                    <div class="file-size">${formatBytes(f.fileSize)}</div>
+                    <button class="btn btn-primary btn-sm" onclick="window.downloadFileById('${f.fileId}', '${escapeHtml(f.fileName)}')">Download</button>
                 </div>
             `).join('');
         }
 
         function renderReceivedFiles() {
-            if (downloadedFiles.length === 0) {
-                receivedFilesDiv.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No files downloaded yet</div>';
-                return;
-            }
-            
-            receivedFilesDiv.innerHTML = downloadedFiles.map((file, index) => `
+            if (downloadedFiles.length === 0) { receivedFilesDiv.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No files downloaded yet</div>'; return; }
+            receivedFilesDiv.innerHTML = downloadedFiles.map(f => `
                 <div class="file-item">
-                    <div class="file-info">
-                        <div class="file-name">${escapeHtml(file.name)}</div>
-                        <div class="file-size">${formatBytes(file.size)}</div>
-                    </div>
-                    <div class="file-actions">
-                        <button class="btn btn-success btn-sm" onclick="window.saveFileAgain('${file.url}', '${escapeHtml(file.name)}')">
-                            Save Again
-                        </button>
-                        <button class="btn btn-primary btn-sm" onclick="window.shareFile('${file.url}', '${escapeHtml(file.name)}')">
-                            Share
-                        </button>
-                    </div>
-                    ${/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) ? `
-                    <div class="mobile-share">
-                        Tap Save Again to download, or Share to send via other apps
-                    </div>
-                    ` : ''}
+                    <div class="file-name">${escapeHtml(f.name)}</div>
+                    <div class="file-size">${formatBytes(f.size)}</div>
+                    <button class="btn btn-success btn-sm" onclick="window.saveFileAgain('${f.url}', '${escapeHtml(f.name)}')">Save Again</button>
                 </div>
             `).join('');
         }
 
-        function updatePeerCount(count) {
-            peerCountEl.textContent = `Devices: ${count}`;
-        }
+        function updatePeerCount(count) { peerCountEl.textContent = `Devices: ${count}`; }
+        function showStatus(msg, type) { const div = connectionStatus; div.className = `status status-${type}`; div.innerHTML = msg; setTimeout(() => { if (div.innerHTML === msg) div.innerHTML = ''; }, 3000); }
+        function generateFileId() { return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`; }
+        function formatBytes(b) { if (b === 0) return '0 Bytes'; const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(b) / Math.log(k)); return parseFloat((b / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]; }
+        function escapeHtml(str) { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
 
-        function showStatus(message, type) {
-            const statusDiv = connectionStatus;
-            statusDiv.className = `status status-${type}`;
-            statusDiv.innerHTML = message;
-            setTimeout(() => {
-                if (statusDiv.innerHTML === message) {
-                    statusDiv.innerHTML = '';
-                }
-            }, 3000);
-        }
-
-        function addSystemMessage(message, type) {
-            console.log(`[${type}] ${message}`);
-        }
-
-        function generateFileId() {
-            return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        }
-
-        function formatBytes(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        function escapeHtml(str) {
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
-        }
-
-        // Global functions for buttons
-        window.downloadFileById = (fileId, fileName, fileSize) => {
-            window.responseSize = fileSize;
-            downloadFile(fileId, fileName);
-        };
-
-        window.saveFileAgain = (url, filename) => {
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            setTimeout(() => {
-                document.body.removeChild(link);
-            }, 100);
-        };
-
-        window.shareFile = async (url, filename) => {
-            if (navigator.share) {
-                try {
-                    // Fetch blob from url
-                    const response = await fetch(url);
-                    const blob = await response.blob();
-                    const file = new File([blob], filename, { type: blob.type });
-                    await navigator.share({
-                        files: [file],
-                        title: filename,
-                        text: `Shared from File Transfer Hub`
-                    });
-                    showStatus(`Shared: ${filename}`, 'success');
-                } catch (err) {
-                    console.error('Share failed:', err);
-                    showStatus('Share failed or cancelled', 'error');
-                }
-            } else {
-                showStatus('Share not supported on this device', 'error');
-            }
-        };
-
-        // Tab switching
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.onclick = () => {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                tab.classList.add('active');
-                document.getElementById(`${tab.dataset.tab}Tab`).classList.add('active');
-            };
-        });
-
-        connectBtn.onclick = connectToRoom;
-        roomKeyInput.onkeypress = (e) => {
-            if (e.key === 'Enter') connectToRoom();
-        };
-
-        initSocket();
-    </script>
-</body>
-</html>
+        window.downloadFile
