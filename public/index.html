@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P File Transfer - Передача файлов через браузер</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .step {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .step h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .file-list {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .file-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #48bb78;
+            transition: width 0.3s;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        .status.info {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+        .hidden {
+            display: none;
+        }
+        .code-display {
+            background: #2d3748;
+            color: #68d391;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 18px;
+            text-align: center;
+            letter-spacing: 2px;
+            margin: 10px 0;
+        }
+        .flex-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .flex-buttons button {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📁 P2P File Transfer</h1>
+        <div id="connectionStatus" class="status info">🟢 Подключение к серверу...</div>
+        
+        <div id="roomControls">
+            <div class="step">
+                <h3>📤 Отправитель</h3>
+                <button id="createRoomBtn">➕ Создать комнату</button>
+            </div>
+            
+            <div class="step">
+                <h3>📥 Получатель</h3>
+                <input type="text" id="roomIdInput" placeholder="Введите код комнаты">
+                <button id="joinRoomBtn">🔗 Подключиться</button>
+            </div>
+        </div>
+
+        <div id="roomInfo" class="hidden">
+            <div class="step">
+                <h3>🔑 Код комнаты (отправьте получателю)</h3>
+                <div class="code-display" id="roomCode"></div>
+                <button id="copyCodeBtn">📋 Копировать код</button>
+            </div>
+        </div>
+
+        <div id="fileSender" class="hidden">
+            <div class="step">
+                <h3>📤 Отправить файлы</h3>
+                <input type="file" id="fileInput" multiple>
+                <div id="sendProgress"></div>
+            </div>
+        </div>
+
+        <div id="fileReceiver" class="hidden">
+            <div class="step">
+                <h3>📥 Полученные файлы</h3>
+                <div id="receivedFiles" class="file-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.min.js"></script>
+    <script>
+        // Конфигурация WebRTC
+        const configuration = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' }
+            ]
+        };
+
+        let socket = io();
+        let peerConnection = null;
+        let currentRoomId = null;
+        let isInitiator = false;
+        let dataChannel = null;
+        
+        // Очередь файлов для отправки
+        let pendingFiles = [];
+        let currentFileIndex = 0;
+        
+        // DOM элементы
+        const createRoomBtn = document.getElementById('createRoomBtn');
+        const joinRoomBtn = document.getElementById('joinRoomBtn');
+        const roomIdInput = document.getElementById('roomIdInput');
+        const roomControls = document.getElementById('roomControls');
+        const roomInfo = document.getElementById('roomInfo');
+        const roomCode = document.getElementById('roomCode');
+        const copyCodeBtn = document.getElementById('copyCodeBtn');
+        const fileSender = document.getElementById('fileSender');
+        const fileReceiver = document.getElementById('fileReceiver');
+        const fileInput = document.getElementById('fileInput');
+        const sendProgress = document.getElementById('sendProgress');
+        const receivedFilesDiv = document.getElementById('receivedFiles');
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        // Генерация случайного кода комнаты
+        function generateRoomId() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        // Создание комнаты
+        createRoomBtn.onclick = () => {
+            const roomId = generateRoomId();
+            socket.emit('create-room', roomId, (response) => {
+                if (response.success) {
+                    currentRoomId = roomId;
+                    isInitiator = true;
+                    roomCode.textContent = roomId;
+                    roomControls.classList.add('hidden');
+                    roomInfo.classList.remove('hidden');
+                    connectionStatus.textContent = `📡 Комната создана: ${roomId}. Ожидание подключения...`;
+                    connectionStatus.className = 'status info';
+                    
+                    // Создаем peer connection
+                    createPeerConnection();
+                } else {
+                    connectionStatus.textContent = '❌ Ошибка создания комнаты';
+                    connectionStatus.className = 'status error';
+                }
+            });
+        };
+
+        // Подключение к комнате
+        joinRoomBtn.onclick = () => {
+            const roomId = roomIdInput.value.trim().toUpperCase();
+            if (!roomId) {
+                alert('Введите код комнаты');
+                return;
+            }
+            
+            socket.emit('join-room', roomId, (response) => {
+                if (response.success) {
+                    currentRoomId = roomId;
+                    isInitiator = false;
+                    roomControls.classList.add('hidden');
+                    connectionStatus.textContent = `📡 Подключение к комнате ${roomId}...`;
+                    connectionStatus.className = 'status info';
+                    
+                    createPeerConnection();
+                } else {
+                    connectionStatus.textContent = '❌ Не удалось подключиться. Комната не существует или уже занята.';
+                    connectionStatus.className = 'status error';
+                }
+            });
+        };
+
+        // Создание WebRTC соединения
+        function createPeerConnection() {
+            peerConnection = new RTCPeerConnection(configuration);
+            
+            // Обработка ICE кандидатов
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit('signal', {
+                        to: isInitiator ? null : socket.id,
+                        signal: { type: 'candidate', candidate: event.candidate }
+                    });
+                }
+            };
+            
+            // Обработка подключения data channel
+            peerConnection.ondatachannel = (event) => {
+                dataChannel = event.channel;
+                setupDataChannel();
+            };
+            
+            if (isInitiator) {
+                // Создаем data channel
+                dataChannel = peerConnection.createDataChannel('fileTransfer');
+                setupDataChannel();
+                
+                // Создаем offer
+                peerConnection.createOffer()
+                    .then(offer => peerConnection.setLocalDescription(offer))
+                    .then(() => {
+                        socket.emit('signal', {
+                            to: null,
+                            signal: { type: 'offer', offer: peerConnection.localDescription }
+                        });
+                    });
+            }
+        }
+        
+        // Настройка DataChannel
+        function setupDataChannel() {
+            dataChannel.onopen = () => {
+                console.log('Data channel opened');
+                connectionStatus.textContent = '✅ Соединение установлено! Можно передавать файлы.';
+                connectionStatus.className = 'status success';
+                
+                if (isInitiator) {
+                    fileSender.classList.remove('hidden');
+                } else {
+                    fileReceiver.classList.remove('hidden');
+                }
+            };
+            
+            dataChannel.onclose = () => {
+                console.log('Data channel closed');
+                connectionStatus.textContent = '⚠️ Соединение закрыто';
+                connectionStatus.className = 'status error';
+            };
+            
+            dataChannel.onmessage = (event) => {
+                receiveFileChunk(event.data);
+            };
+        }
+        
+        // Обработка signaling сообщений
+        socket.on('signal', async (data) => {
+            if (!peerConnection) return;
+            
+            const { signal } = data;
+            
+            if (signal.type === 'offer') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.offer));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                socket.emit('signal', {
+                    to: data.from,
+                    signal: { type: 'answer', answer: peerConnection.localDescription }
+                });
+            } else if (signal.type === 'answer') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.answer));
+            } else if (signal.type === 'candidate') {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+            }
+        });
+        
+        socket.on('peer-joined', () => {
+            connectionStatus.textContent = '👥 Получатель подключился! Устанавливаем соединение...';
+        });
+        
+        socket.on('peer-disconnected', () => {
+            connectionStatus.textContent = '🔌 Соединение разорвано';
+            connectionStatus.className = 'status error';
+            fileSender.classList.add('hidden');
+            fileReceiver.classList.add('hidden');
+        });
+        
+        // Отправка файлов
+        fileInput.onchange = async (event) => {
+            const files = Array.from(event.target.files);
+            if (files.length === 0) return;
+            
+            sendProgress.innerHTML = '';
+            
+            for (let file of files) {
+                await sendFile(file);
+            }
+            
+            connectionStatus.textContent = `✅ Отправлено ${files.length} файлов!`;
+            setTimeout(() => {
+                connectionStatus.textContent = '✅ Соединение установлено! Можно передавать файлы.';
+            }, 3000);
+        };
+        
+        function sendFile(file) {
+            return new Promise((resolve) => {
+                const chunkSize = 16384; // 16KB chunks
+                let offset = 0;
+                
+                // Отправляем метаданные файла
+                const metadata = {
+                    type: 'metadata',
+                    name: file.name,
+                    size: file.size,
+                    lastModified: file.lastModified
+                };
+                dataChannel.send(JSON.stringify(metadata));
+                
+                const progressDiv = document.createElement('div');
+                progressDiv.className = 'file-item';
+                progressDiv.innerHTML = `
+                    <div>
+                        <strong>${file.name}</strong>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <span>0%</span>
+                `;
+                sendProgress.appendChild(progressDiv);
+                
+                const progressFill = progressDiv.querySelector('.progress-fill');
+                const percentSpan = progressDiv.querySelector('span');
+                
+                const reader = new FileReader();
+                
+                function readNextChunk() {
+                    const slice = file.slice(offset, offset + chunkSize);
+                    reader.readAsArrayBuffer(slice);
+                }
+                
+                reader.onload = (e) => {
+                    dataChannel.send(e.target.result);
+                    offset += e.target.result.byteLength;
+                    
+                    const percent = (offset / file.size) * 100;
+                    progressFill.style.width = `${percent}%`;
+                    percentSpan.textContent = `${Math.round(percent)}%`;
+                    
+                    if (offset < file.size) {
+                        readNextChunk();
+                    } else {
+                        // Отправляем сигнал окончания файла
+                        dataChannel.send(JSON.stringify({ type: 'end', name: file.name }));
+                        setTimeout(resolve, 100);
+                    }
+                };
+                
+                readNextChunk();
+            });
+        }
+        
+        // Получение файлов
+        let currentFile = null;
+        let receivedChunks = [];
+        
+        function receiveFileChunk(data) {
+            if (typeof data === 'string') {
+                // JSON сообщение (метаданные или конец файла)
+                try {
+                    const message = JSON.parse(data);
+                    
+                    if (message.type === 'metadata') {
+                        // Начинаем новый файл
+                        currentFile = {
+                            name: message.name,
+                            size: message.size,
+                            receivedSize: 0,
+                            chunks: []
+                        };
+                        receivedChunks = [];
+                        
+                        console.log(`Receiving file: ${currentFile.name} (${currentFile.size} bytes)`);
+                    } else if (message.type === 'end') {
+                        // Файл получен полностью, сохраняем
+                        if (currentFile && currentFile.name === message.name) {
+                            const blob = new Blob(receivedChunks);
+                            const url = URL.createObjectURL(blob);
+                            
+                            const fileItem = document.createElement('div');
+                            fileItem.className = 'file-item';
+                            fileItem.innerHTML = `
+                                <div>
+                                    <strong>📄 ${currentFile.name}</strong>
+                                    <div>${(currentFile.size / 1024 / 1024).toFixed(2)} MB</div>
+                                </div>
+                                <button onclick="downloadFile('${url}', '${currentFile.name}')">💾 Скачать</button>
+                            `;
+                            receivedFilesDiv.appendChild(fileItem);
+                            
+                            connectionStatus.textContent = `✅ Получен файл: ${currentFile.name}`;
+                            setTimeout(() => {
+                                connectionStatus.textContent = '✅ Соединение установлено! Можно передавать файлы.';
+                            }, 2000);
+                            
+                            currentFile = null;
+                            receivedChunks = [];
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing message:', e);
+                }
+            } else {
+                // Бинарные данные (чанк файла)
+                if (currentFile) {
+                    receivedChunks.push(data);
+                    currentFile.receivedSize += data.byteLength;
+                }
+            }
+        }
+        
+        // Глобальная функция для скачивания
+        window.downloadFile = (url, filename) => {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+        };
+        
+        copyCodeBtn.onclick = () => {
+            navigator.clipboard.writeText(currentRoomId);
+            copyCodeBtn.textContent = '✅ Скопировано!';
+            setTimeout(() => {
+                copyCodeBtn.textContent = '📋 Копировать код';
+            }, 2000);
+        };
+        
+        // Статус подключения к сокету
+        socket.on('connect', () => {
+            connectionStatus.textContent = '✅ Подключено к серверу';
+            connectionStatus.className = 'status success';
+        });
+        
+        socket.on('disconnect', () => {
+            connectionStatus.textContent = '❌ Потеряно соединение с сервером';
+            connectionStatus.className = 'status error';
+        });
+    </script>
+</body>
+</html>
