@@ -2,497 +2,779 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P File Transfer - Передача файлов через браузер</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>File Transfer Hub</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #0a0e27;
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            color: #e0e0e0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
             padding: 20px;
         }
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            padding: 30px;
-            max-width: 600px;
-            width: 100%;
-        }
-        h1 {
+
+        /* Header */
+        .header {
             text-align: center;
-            color: #333;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #0f1535 0%, #0a0e27 100%);
+            border-bottom: 1px solid #1e2a4a;
             margin-bottom: 30px;
         }
-        .step {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #4f9eff, #7c3aed);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        /* Cards */
+        .card {
+            background: #0f1535;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid #1e2a4a;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .card h2 {
+            font-size: 1.3rem;
             margin-bottom: 20px;
+            color: #4f9eff;
         }
-        .step h3 {
-            color: #667eea;
-            margin-bottom: 15px;
+
+        /* Input groups */
+        .input-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
         }
-        input, button {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border: 2px solid #e0e0e0;
+
+        .input-group input {
+            flex: 1;
+            padding: 12px 16px;
+            background: #0a0e27;
+            border: 1px solid #1e2a4a;
             border-radius: 8px;
-            font-size: 16px;
+            color: #e0e0e0;
+            font-size: 1rem;
             transition: all 0.3s;
         }
-        button {
-            background: #667eea;
-            color: white;
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #4f9eff;
+            box-shadow: 0 0 0 2px rgba(79, 158, 255, 0.1);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            background: #1e2a4a;
             border: none;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 1rem;
+            font-weight: 500;
             cursor: pointer;
-            font-weight: bold;
+            transition: all 0.3s;
         }
-        button:hover {
-            background: #5a67d8;
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4f9eff, #7c3aed);
+            color: white;
+        }
+
+        .btn-primary:hover {
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 158, 255, 0.3);
         }
-        button:disabled {
-            background: #ccc;
+
+        .btn-danger {
+            background: #dc2626;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .btn-success {
+            background: #10b981;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
+            transform: none;
         }
+
+        /* Status messages */
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 16px;
+            font-size: 0.9rem;
+        }
+
+        .status-info {
+            background: #1e2a4a;
+            color: #4f9eff;
+            border-left: 3px solid #4f9eff;
+        }
+
+        .status-success {
+            background: #064e3b;
+            color: #10b981;
+            border-left: 3px solid #10b981;
+        }
+
+        .status-error {
+            background: #7f1d1d;
+            color: #f87171;
+            border-left: 3px solid #dc2626;
+        }
+
+        /* File drop zone */
+        .drop-zone {
+            border: 2px dashed #1e2a4a;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            background: #0a0e27;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .drop-zone.drag-over {
+            border-color: #4f9eff;
+            background: #0f1535;
+        }
+
+        .drop-zone p {
+            color: #6b7280;
+            margin-top: 12px;
+        }
+
+        /* File list */
         .file-list {
             margin-top: 20px;
-            max-height: 300px;
+            max-height: 400px;
             overflow-y: auto;
         }
+
         .file-item {
-            background: white;
-            border: 1px solid #e0e0e0;
+            background: #0a0e27;
+            border: 1px solid #1e2a4a;
             border-radius: 8px;
-            padding: 10px;
-            margin: 10px 0;
+            padding: 12px;
+            margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
         }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .file-size {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
         .progress-bar {
-            width: 100%;
+            width: 200px;
             height: 4px;
-            background: #e0e0e0;
+            background: #1e2a4a;
             border-radius: 2px;
             overflow: hidden;
-            margin-top: 5px;
+            margin-top: 8px;
         }
+
         .progress-fill {
             height: 100%;
-            background: #48bb78;
+            background: linear-gradient(90deg, #4f9eff, #7c3aed);
             transition: width 0.3s;
         }
-        .status {
-            text-align: center;
-            padding: 10px;
+
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .file-actions button {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+
+        /* Room info */
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .room-key {
+            font-family: monospace;
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: #0a0e27;
+            padding: 8px 16px;
             border-radius: 8px;
-            margin: 10px 0;
+            border: 1px solid #4f9eff;
+            color: #4f9eff;
         }
-        .status.success {
-            background: #c6f6d5;
-            color: #22543d;
+
+        .peer-count {
+            background: #1e2a4a;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
         }
-        .status.error {
-            background: #fed7d7;
-            color: #742a2a;
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #1e2a4a;
         }
-        .status.info {
-            background: #bee3f8;
-            color: #2c5282;
+
+        .tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
         }
-        .hidden {
+
+        .tab.active {
+            color: #4f9eff;
+            border-bottom: 2px solid #4f9eff;
+        }
+
+        .tab-content {
             display: none;
         }
-        .code-display {
-            background: #2d3748;
-            color: #68d391;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 18px;
-            text-align: center;
-            letter-spacing: 2px;
-            margin: 10px 0;
+
+        .tab-content.active {
+            display: block;
         }
-        .flex-buttons {
+
+        /* Queue */
+        .queue-item {
             display: flex;
-            gap: 10px;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: #0a0e27;
+            border-radius: 6px;
+            margin-bottom: 6px;
         }
-        .flex-buttons button {
-            flex: 1;
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+            }
+            
+            .file-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .progress-bar {
+                width: 100%;
+            }
+            
+            .room-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="header">
+        <h1>FILE TRANSFER HUB</h1>
+    </div>
+
     <div class="container">
-        <h1>📁 P2P File Transfer</h1>
-        <div id="connectionStatus" class="status info">🟢 Подключение к серверу...</div>
-        
-        <div id="roomControls">
-            <div class="step">
-                <h3>📤 Отправитель</h3>
-                <button id="createRoomBtn">➕ Создать комнату</button>
+        <!-- Connection Panel -->
+        <div id="connectionPanel" class="card">
+            <h2>Connect to Room</h2>
+            <div class="input-group">
+                <input type="text" id="roomKeyInput" placeholder="Enter room key" maxlength="20">
+                <button id="connectBtn" class="btn btn-primary">Join / Create</button>
             </div>
-            
-            <div class="step">
-                <h3>📥 Получатель</h3>
-                <input type="text" id="roomIdInput" placeholder="Введите код комнаты">
-                <button id="joinRoomBtn">🔗 Подключиться</button>
-            </div>
+            <div id="connectionStatus"></div>
         </div>
 
-        <div id="roomInfo" class="hidden">
-            <div class="step">
-                <h3>🔑 Код комнаты (отправьте получателю)</h3>
-                <div class="code-display" id="roomCode"></div>
-                <button id="copyCodeBtn">📋 Копировать код</button>
+        <!-- Main Interface (shown after connection) -->
+        <div id="mainInterface" style="display: none;">
+            <div class="card">
+                <div class="room-header">
+                    <div>
+                        <div style="font-size: 0.85rem; color: #6b7280;">Room Key</div>
+                        <div class="room-key" id="currentRoomKey"></div>
+                    </div>
+                    <div class="peer-count" id="peerCount">Devices: 1</div>
+                    <button id="leaveRoomBtn" class="btn btn-danger">Leave Room</button>
+                </div>
             </div>
-        </div>
 
-        <div id="fileSender" class="hidden">
-            <div class="step">
-                <h3>📤 Отправить файлы</h3>
-                <input type="file" id="fileInput" multiple>
-                <div id="sendProgress"></div>
+            <div class="tabs">
+                <button class="tab active" data-tab="send">Send Files</button>
+                <button class="tab" data-tab="received">Received Files</button>
             </div>
-        </div>
 
-        <div id="fileReceiver" class="hidden">
-            <div class="step">
-                <h3>📥 Полученные файлы</h3>
-                <div id="receivedFiles" class="file-list"></div>
+            <!-- Send Tab -->
+            <div id="sendTab" class="tab-content active">
+                <div class="card">
+                    <h2>Drop Files Here or Click to Select</h2>
+                    <div id="dropZone" class="drop-zone">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 3v12m0 0-3-3m3 3 3-3M5 17h14a2 2 0 0 1 2 2v2H3v-2a2 2 0 0 1 2-2z"/>
+                        </svg>
+                        <p>Drag & drop files here or click to browse</p>
+                    </div>
+                    <input type="file" id="fileInput" multiple style="display: none;">
+                </div>
+
+                <div class="card">
+                    <h2>Upload Queue</h2>
+                    <div id="uploadQueue" class="file-list">
+                        <div style="text-align: center; color: #6b7280; padding: 20px;">No files in queue</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Available Files from Peers</h2>
+                    <div id="availableFiles" class="file-list">
+                        <div style="text-align: center; color: #6b7280; padding: 20px;">No shared files</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Received Tab -->
+            <div id="receivedTab" class="tab-content">
+                <div class="card">
+                    <h2>Downloaded Files</h2>
+                    <div id="receivedFiles" class="file-list">
+                        <div style="text-align: center; color: #6b7280; padding: 20px;">No files downloaded yet</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.min.js"></script>
     <script>
-        // Конфигурация WebRTC
-        const configuration = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' }
-            ]
-        };
+        let socket = null;
+        let currentRoomKey = null;
+        let uploadQueue = [];
+        let activeUploads = new Map();
+        let availableFiles = new Map();
+        let receivedFiles = [];
+        let peerConnections = new Map();
 
-        let socket = io();
-        let peerConnection = null;
-        let currentRoomId = null;
-        let isInitiator = false;
-        let dataChannel = null;
-        
-        // Очередь файлов для отправки
-        let pendingFiles = [];
-        let currentFileIndex = 0;
-        
-        // DOM элементы
-        const createRoomBtn = document.getElementById('createRoomBtn');
-        const joinRoomBtn = document.getElementById('joinRoomBtn');
-        const roomIdInput = document.getElementById('roomIdInput');
-        const roomControls = document.getElementById('roomControls');
-        const roomInfo = document.getElementById('roomInfo');
-        const roomCode = document.getElementById('roomCode');
-        const copyCodeBtn = document.getElementById('copyCodeBtn');
-        const fileSender = document.getElementById('fileSender');
-        const fileReceiver = document.getElementById('fileReceiver');
-        const fileInput = document.getElementById('fileInput');
-        const sendProgress = document.getElementById('sendProgress');
-        const receivedFilesDiv = document.getElementById('receivedFiles');
+        // DOM elements
+        const connectBtn = document.getElementById('connectBtn');
+        const roomKeyInput = document.getElementById('roomKeyInput');
         const connectionStatus = document.getElementById('connectionStatus');
+        const connectionPanel = document.getElementById('connectionPanel');
+        const mainInterface = document.getElementById('mainInterface');
+        const currentRoomKeyEl = document.getElementById('currentRoomKey');
+        const peerCountEl = document.getElementById('peerCount');
+        const leaveRoomBtn = document.getElementById('leaveRoomBtn');
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadQueueDiv = document.getElementById('uploadQueue');
+        const availableFilesDiv = document.getElementById('availableFiles');
+        const receivedFilesDiv = document.getElementById('receivedFiles');
 
-        // Генерация случайного кода комнаты
-        function generateRoomId() {
-            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        // Initialize socket connection
+        function initSocket() {
+            socket = io();
+            
+            socket.on('connect', () => {
+                console.log('Socket connected');
+            });
+
+            socket.on('peer-joined', (data) => {
+                updatePeerCount(data.clientsCount);
+                addSystemMessage(`Device joined the room`, 'info');
+            });
+
+            socket.on('peer-left', (data) => {
+                updatePeerCount(data.clientsCount);
+                addSystemMessage(`Device left the room`, 'info');
+            });
+
+            socket.on('file-metadata', (data) => {
+                availableFiles.set(data.fileId, {
+                    ...data,
+                    status: 'available'
+                });
+                renderAvailableFiles();
+                addSystemMessage(`New file available: ${data.fileName}`, 'success');
+            });
+
+            socket.on('file-chunk', (data) => {
+                receiveFileChunk(data);
+            });
+
+            socket.on('file-request', (data) => {
+                handleFileRequest(data);
+            });
         }
 
-        // Создание комнаты
-        createRoomBtn.onclick = () => {
-            const roomId = generateRoomId();
-            socket.emit('create-room', roomId, (response) => {
+        // Connect to room
+        function connectToRoom() {
+            const roomKey = roomKeyInput.value.trim();
+            if (!roomKey) {
+                showStatus('Please enter a room key', 'error');
+                return;
+            }
+
+            if (!socket) {
+                initSocket();
+                setTimeout(() => performJoin(roomKey), 500);
+            } else {
+                performJoin(roomKey);
+            }
+        }
+
+        function performJoin(roomKey) {
+            showStatus('Connecting to room...', 'info');
+            
+            socket.emit('join-room', roomKey, (response) => {
                 if (response.success) {
-                    currentRoomId = roomId;
-                    isInitiator = true;
-                    roomCode.textContent = roomId;
-                    roomControls.classList.add('hidden');
-                    roomInfo.classList.remove('hidden');
-                    connectionStatus.textContent = `📡 Комната создана: ${roomId}. Ожидание подключения...`;
-                    connectionStatus.className = 'status info';
+                    currentRoomKey = roomKey;
+                    currentRoomKeyEl.textContent = roomKey;
+                    updatePeerCount(response.clientsCount);
                     
-                    // Создаем peer connection
-                    createPeerConnection();
+                    connectionPanel.style.display = 'none';
+                    mainInterface.style.display = 'block';
+                    
+                    showStatus(`Connected to room: ${roomKey}`, 'success');
+                    addSystemMessage(`You joined the room as ${response.isCreator ? 'creator' : 'peer'}`, 'success');
+                    
+                    setupFileTransfer();
                 } else {
-                    connectionStatus.textContent = '❌ Ошибка создания комнаты';
-                    connectionStatus.className = 'status error';
+                    showStatus('Failed to connect to room', 'error');
                 }
             });
+        }
+
+        // Leave room
+        leaveRoomBtn.onclick = () => {
+            if (socket && currentRoomKey) {
+                socket.emit('leave-room');
+                socket.disconnect();
+                socket = null;
+                currentRoomKey = null;
+                uploadQueue = [];
+                activeUploads.clear();
+                availableFiles.clear();
+                receivedFiles = [];
+                
+                connectionPanel.style.display = 'block';
+                mainInterface.style.display = 'none';
+                roomKeyInput.value = '';
+                
+                showStatus('Left the room', 'info');
+                initSocket();
+            }
         };
 
-        // Подключение к комнате
-        joinRoomBtn.onclick = () => {
-            const roomId = roomIdInput.value.trim().toUpperCase();
-            if (!roomId) {
-                alert('Введите код комнаты');
+        // Setup file transfer handlers
+        function setupFileTransfer() {
+            // Drop zone handlers
+            dropZone.onclick = () => fileInput.click();
+            
+            dropZone.ondragover = (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            };
+            
+            dropZone.ondragleave = () => {
+                dropZone.classList.remove('drag-over');
+            };
+            
+            dropZone.ondrop = (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                const files = Array.from(e.dataTransfer.files);
+                addFilesToQueue(files);
+            };
+            
+            fileInput.onchange = (e) => {
+                const files = Array.from(e.target.files);
+                addFilesToQueue(files);
+                fileInput.value = '';
+            };
+        }
+
+        // Add files to upload queue
+        function addFilesToQueue(files) {
+            for (let file of files) {
+                const fileId = generateFileId();
+                uploadQueue.push({
+                    id: fileId,
+                    file: file,
+                    status: 'pending',
+                    progress: 0
+                });
+                
+                // Announce file to all peers
+                socket.emit('file-metadata', {
+                    fileId: fileId,
+                    fileName: file.name,
+                    fileSize: file.size,
+                    fileType: file.type
+                });
+            }
+            renderUploadQueue();
+            processQueue();
+        }
+
+        // Process upload queue
+        async function processQueue() {
+            for (let item of uploadQueue) {
+                if (item.status === 'pending') {
+                    await uploadFile(item);
+                }
+            }
+        }
+
+        // Upload file to all peers
+        async function uploadFile(queueItem) {
+            queueItem.status = 'uploading';
+            renderUploadQueue();
+            
+            const file = queueItem.file;
+            const chunkSize = 16384;
+            let offset = 0;
+            
+            while (offset < file.size) {
+                const chunk = file.slice(offset, offset + chunkSize);
+                const arrayBuffer = await readFileChunk(chunk);
+                
+                socket.emit('file-chunk', {
+                    fileId: queueItem.id,
+                    chunk: arrayBuffer,
+                    offset: offset,
+                    isLast: offset + chunkSize >= file.size
+                });
+                
+                offset += chunkSize;
+                queueItem.progress = (offset / file.size) * 100;
+                renderUploadQueue();
+                
+                // Small delay to prevent flooding
+                await new Promise(resolve => setTimeout(resolve, 10));
+            }
+            
+            queueItem.status = 'completed';
+            renderUploadQueue();
+            addSystemMessage(`Upload complete: ${file.name}`, 'success');
+        }
+
+        // Read file chunk as ArrayBuffer
+        function readFileChunk(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(blob);
+            });
+        }
+
+        // Receive file chunk
+        let receivingFiles = new Map();
+        
+        function receiveFileChunk(data) {
+            if (!receivingFiles.has(data.fileId)) {
+                receivingFiles.set(data.fileId, {
+                    chunks: [],
+                    size: 0,
+                    fileName: null
+                });
+            }
+            
+            const fileData = receivingFiles.get(data.fileId);
+            fileData.chunks.push(data.chunk);
+            
+            if (data.isLast) {
+                // Find file name from available files
+                const fileInfo = availableFiles.get(data.fileId);
+                if (fileInfo) {
+                    fileData.fileName = fileInfo.fileName;
+                }
+                
+                // Assemble file
+                const blob = new Blob(fileData.chunks);
+                const url = URL.createObjectURL(blob);
+                
+                receivedFiles.push({
+                    id: data.fileId,
+                    name: fileData.fileName || `file_${data.fileId}`,
+                    url: url,
+                    size: blob.size
+                });
+                
+                renderReceivedFiles();
+                receivingFiles.delete(data.fileId);
+                addSystemMessage(`File received: ${fileData.fileName}`, 'success');
+            }
+        }
+
+        // Handle file request from peer
+        function handleFileRequest(data) {
+            const queueItem = uploadQueue.find(item => item.id === data.fileId);
+            if (queueItem && queueItem.file) {
+                uploadFile(queueItem);
+            }
+        }
+
+        // Request file from peer
+        function requestFile(fileId, peerId) {
+            socket.emit('request-file', {
+                fileId: fileId,
+                peerId: peerId
+            });
+        }
+
+        // Render functions
+        function renderUploadQueue() {
+            if (uploadQueue.length === 0) {
+                uploadQueueDiv.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No files in queue</div>';
                 return;
             }
             
-            socket.emit('join-room', roomId, (response) => {
-                if (response.success) {
-                    currentRoomId = roomId;
-                    isInitiator = false;
-                    roomControls.classList.add('hidden');
-                    connectionStatus.textContent = `📡 Подключение к комнате ${roomId}...`;
-                    connectionStatus.className = 'status info';
-                    
-                    createPeerConnection();
-                } else {
-                    connectionStatus.textContent = '❌ Не удалось подключиться. Комната не существует или уже занята.';
-                    connectionStatus.className = 'status error';
-                }
-            });
-        };
-
-        // Создание WebRTC соединения
-        function createPeerConnection() {
-            peerConnection = new RTCPeerConnection(configuration);
-            
-            // Обработка ICE кандидатов
-            peerConnection.onicecandidate = (event) => {
-                if (event.candidate) {
-                    socket.emit('signal', {
-                        to: isInitiator ? null : socket.id,
-                        signal: { type: 'candidate', candidate: event.candidate }
-                    });
-                }
-            };
-            
-            // Обработка подключения data channel
-            peerConnection.ondatachannel = (event) => {
-                dataChannel = event.channel;
-                setupDataChannel();
-            };
-            
-            if (isInitiator) {
-                // Создаем data channel
-                dataChannel = peerConnection.createDataChannel('fileTransfer');
-                setupDataChannel();
-                
-                // Создаем offer
-                peerConnection.createOffer()
-                    .then(offer => peerConnection.setLocalDescription(offer))
-                    .then(() => {
-                        socket.emit('signal', {
-                            to: null,
-                            signal: { type: 'offer', offer: peerConnection.localDescription }
-                        });
-                    });
-            }
-        }
-        
-        // Настройка DataChannel
-        function setupDataChannel() {
-            dataChannel.onopen = () => {
-                console.log('Data channel opened');
-                connectionStatus.textContent = '✅ Соединение установлено! Можно передавать файлы.';
-                connectionStatus.className = 'status success';
-                
-                if (isInitiator) {
-                    fileSender.classList.remove('hidden');
-                } else {
-                    fileReceiver.classList.remove('hidden');
-                }
-            };
-            
-            dataChannel.onclose = () => {
-                console.log('Data channel closed');
-                connectionStatus.textContent = '⚠️ Соединение закрыто';
-                connectionStatus.className = 'status error';
-            };
-            
-            dataChannel.onmessage = (event) => {
-                receiveFileChunk(event.data);
-            };
-        }
-        
-        // Обработка signaling сообщений
-        socket.on('signal', async (data) => {
-            if (!peerConnection) return;
-            
-            const { signal } = data;
-            
-            if (signal.type === 'offer') {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.offer));
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                socket.emit('signal', {
-                    to: data.from,
-                    signal: { type: 'answer', answer: peerConnection.localDescription }
-                });
-            } else if (signal.type === 'answer') {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.answer));
-            } else if (signal.type === 'candidate') {
-                await peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
-            }
-        });
-        
-        socket.on('peer-joined', () => {
-            connectionStatus.textContent = '👥 Получатель подключился! Устанавливаем соединение...';
-        });
-        
-        socket.on('peer-disconnected', () => {
-            connectionStatus.textContent = '🔌 Соединение разорвано';
-            connectionStatus.className = 'status error';
-            fileSender.classList.add('hidden');
-            fileReceiver.classList.add('hidden');
-        });
-        
-        // Отправка файлов
-        fileInput.onchange = async (event) => {
-            const files = Array.from(event.target.files);
-            if (files.length === 0) return;
-            
-            sendProgress.innerHTML = '';
-            
-            for (let file of files) {
-                await sendFile(file);
-            }
-            
-            connectionStatus.textContent = `✅ Отправлено ${files.length} файлов!`;
-            setTimeout(() => {
-                connectionStatus.textContent = '✅ Соединение установлено! Можно передавать файлы.';
-            }, 3000);
-        };
-        
-        function sendFile(file) {
-            return new Promise((resolve) => {
-                const chunkSize = 16384; // 16KB chunks
-                let offset = 0;
-                
-                // Отправляем метаданные файла
-                const metadata = {
-                    type: 'metadata',
-                    name: file.name,
-                    size: file.size,
-                    lastModified: file.lastModified
-                };
-                dataChannel.send(JSON.stringify(metadata));
-                
-                const progressDiv = document.createElement('div');
-                progressDiv.className = 'file-item';
-                progressDiv.innerHTML = `
-                    <div>
-                        <strong>${file.name}</strong>
+            uploadQueueDiv.innerHTML = uploadQueue.map(item => `
+                <div class="file-item">
+                    <div class="file-info">
+                        <div class="file-name">${escapeHtml(item.file.name)}</div>
+                        <div class="file-size">${formatBytes(item.file.size)}</div>
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: 0%"></div>
+                            <div class="progress-fill" style="width: ${item.progress}%"></div>
                         </div>
                     </div>
-                    <span>0%</span>
-                `;
-                sendProgress.appendChild(progressDiv);
-                
-                const progressFill = progressDiv.querySelector('.progress-fill');
-                const percentSpan = progressDiv.querySelector('span');
-                
-                const reader = new FileReader();
-                
-                function readNextChunk() {
-                    const slice = file.slice(offset, offset + chunkSize);
-                    reader.readAsArrayBuffer(slice);
-                }
-                
-                reader.onload = (e) => {
-                    dataChannel.send(e.target.result);
-                    offset += e.target.result.byteLength;
-                    
-                    const percent = (offset / file.size) * 100;
-                    progressFill.style.width = `${percent}%`;
-                    percentSpan.textContent = `${Math.round(percent)}%`;
-                    
-                    if (offset < file.size) {
-                        readNextChunk();
-                    } else {
-                        // Отправляем сигнал окончания файла
-                        dataChannel.send(JSON.stringify({ type: 'end', name: file.name }));
-                        setTimeout(resolve, 100);
-                    }
-                };
-                
-                readNextChunk();
-            });
+                    <div class="file-actions">
+                        <span style="font-size: 0.85rem; color: #6b7280;">
+                            ${item.status === 'pending' ? 'Pending' : item.status === 'uploading' ? `${Math.round(item.progress)}%` : 'Complete'}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
         }
-        
-        // Получение файлов
-        let currentFile = null;
-        let receivedChunks = [];
-        
-        function receiveFileChunk(data) {
-            if (typeof data === 'string') {
-                // JSON сообщение (метаданные или конец файла)
-                try {
-                    const message = JSON.parse(data);
-                    
-                    if (message.type === 'metadata') {
-                        // Начинаем новый файл
-                        currentFile = {
-                            name: message.name,
-                            size: message.size,
-                            receivedSize: 0,
-                            chunks: []
-                        };
-                        receivedChunks = [];
-                        
-                        console.log(`Receiving file: ${currentFile.name} (${currentFile.size} bytes)`);
-                    } else if (message.type === 'end') {
-                        // Файл получен полностью, сохраняем
-                        if (currentFile && currentFile.name === message.name) {
-                            const blob = new Blob(receivedChunks);
-                            const url = URL.createObjectURL(blob);
-                            
-                            const fileItem = document.createElement('div');
-                            fileItem.className = 'file-item';
-                            fileItem.innerHTML = `
-                                <div>
-                                    <strong>📄 ${currentFile.name}</strong>
-                                    <div>${(currentFile.size / 1024 / 1024).toFixed(2)} MB</div>
-                                </div>
-                                <button onclick="downloadFile('${url}', '${currentFile.name}')">💾 Скачать</button>
-                            `;
-                            receivedFilesDiv.appendChild(fileItem);
-                            
-                            connectionStatus.textContent = `✅ Получен файл: ${currentFile.name}`;
-                            setTimeout(() => {
-                                connectionStatus.textContent = '✅ Соединение установлено! Можно передавать файлы.';
-                            }, 2000);
-                            
-                            currentFile = null;
-                            receivedChunks = [];
-                        }
-                    }
-                } catch (e) {
-                    console.error('Error parsing message:', e);
-                }
-            } else {
-                // Бинарные данные (чанк файла)
-                if (currentFile) {
-                    receivedChunks.push(data);
-                    currentFile.receivedSize += data.byteLength;
-                }
+
+        function renderAvailableFiles() {
+            const files = Array.from(availableFiles.values());
+            if (files.length === 0) {
+                availableFilesDiv.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No shared files</div>';
+                return;
             }
+            
+            availableFilesDiv.innerHTML = files.map(file => `
+                <div class="file-item">
+                    <div class="file-info">
+                        <div class="file-name">${escapeHtml(file.fileName)}</div>
+                        <div class="file-size">${formatBytes(file.fileSize)}</div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-primary" onclick="requestFile('${file.fileId}', '${file.senderId}')">Download</button>
+                    </div>
+                </div>
+            `).join('');
         }
-        
-        // Глобальная функция для скачивания
+
+        function renderReceivedFiles() {
+            if (receivedFiles.length === 0) {
+                receivedFilesDiv.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No files downloaded yet</div>';
+                return;
+            }
+            
+            receivedFilesDiv.innerHTML = receivedFiles.map(file => `
+                <div class="file-item">
+                    <div class="file-info">
+                        <div class="file-name">${escapeHtml(file.name)}</div>
+                        <div class="file-size">${formatBytes(file.size)}</div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-success" onclick="downloadFile('${file.url}', '${escapeHtml(file.name)}')">Save</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updatePeerCount(count) {
+            peerCountEl.textContent = `Devices: ${count}`;
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = connectionStatus;
+            statusDiv.className = `status status-${type}`;
+            statusDiv.innerHTML = message;
+            setTimeout(() => {
+                if (statusDiv.innerHTML === message) {
+                    statusDiv.innerHTML = '';
+                }
+            }, 3000);
+        }
+
+        function addSystemMessage(message, type) {
+            console.log(`[${type}] ${message}`);
+        }
+
+        // Utility functions
+        function generateFileId() {
+            return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
         window.downloadFile = (url, filename) => {
             const a = document.createElement('a');
             a.href = url;
@@ -500,27 +782,30 @@
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            setTimeout(() => URL.revokeObjectURL(url), 100);
         };
-        
-        copyCodeBtn.onclick = () => {
-            navigator.clipboard.writeText(currentRoomId);
-            copyCodeBtn.textContent = '✅ Скопировано!';
-            setTimeout(() => {
-                copyCodeBtn.textContent = '📋 Копировать код';
-            }, 2000);
+
+        window.requestFile = (fileId, peerId) => {
+            requestFile(fileId, peerId);
         };
-        
-        // Статус подключения к сокету
-        socket.on('connect', () => {
-            connectionStatus.textContent = '✅ Подключено к серверу';
-            connectionStatus.className = 'status success';
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.onclick = () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`${tab.dataset.tab}Tab`).classList.add('active');
+            };
         });
-        
-        socket.on('disconnect', () => {
-            connectionStatus.textContent = '❌ Потеряно соединение с сервером';
-            connectionStatus.className = 'status error';
-        });
+
+        // Event listeners
+        connectBtn.onclick = connectToRoom;
+        roomKeyInput.onkeypress = (e) => {
+            if (e.key === 'Enter') connectToRoom();
+        };
+
+        // Initialize socket on page load
+        initSocket();
     </script>
 </body>
 </html>
