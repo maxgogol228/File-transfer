@@ -374,10 +374,10 @@
     <script>
         let socket = null;
         let currentRoomKey = null;
-        let myUploads = new Map(); // fileId -> { file, progress, status }
-        let roomFiles = new Map(); // fileId -> metadata
-        let downloadedFiles = []; // array of { id, name, url, size }
-        let uploadChunkSize = 16384; // 16KB chunks
+        let myUploads = new Map();
+        let roomFiles = new Map();
+        let downloadedFiles = [];
+        const CHUNK_SIZE = 16384; // 16KB chunks
 
         // DOM elements
         const connectBtn = document.getElementById('connectBtn');
@@ -399,6 +399,7 @@
             
             socket.on('connect', () => {
                 console.log('Socket connected');
+                showStatus('Connected to server', 'success');
             });
 
             socket.on('peer-joined', (data) => {
@@ -412,16 +413,18 @@
             });
 
             socket.on('file-available', (data) => {
-                roomFiles.set(data.fileId, data);
-                renderAvailableFiles();
-                addSystemMessage(`New file available: ${data.fileName}`, 'success');
+                if (!roomFiles.has(data.fileId)) {
+                    roomFiles.set(data.fileId, data);
+                    renderAvailableFiles();
+                    addSystemMessage(`New file available: ${data.fileName}`, 'success');
+                }
             });
 
             socket.on('upload-progress', (data) => {
                 if (myUploads.has(data.fileId)) {
                     const upload = myUploads.get(data.fileId);
                     upload.progress = data.progress;
-                    if (data.isComplete) {
+                    if (data.progress >= 100) {
                         upload.status = 'complete';
                     }
                     renderUploadsList();
@@ -453,7 +456,6 @@
                     currentRoomKeyEl.textContent = roomKey;
                     updatePeerCount(response.clientsCount);
                     
-                    // Load existing files
                     if (response.files && response.files.length > 0) {
                         response.files.forEach(file => {
                             roomFiles.set(file.fileId, file);
@@ -465,8 +467,6 @@
                     mainInterface.style.display = 'block';
                     
                     showStatus(`Connected to room: ${roomKey}`, 'success');
-                    addSystemMessage(`You joined the room`, 'success');
-                    
                     setupFileTransfer();
                 } else {
                     showStatus('Failed to connect to room', 'error');
@@ -525,46 +525,53 @@
                 
                 myUploads.set(fileId, {
                     id: fileId,
-                    file: file,
+                    fileName: file.name,
+                    fileSize: file.size,
                     progress: 0,
                     status: 'uploading'
                 });
                 renderUploadsList();
+                
+                // Notify server that upload is starting
+                socket.emit('file-upload-start', {
+                    fileId: fileId,
+                    fileName: file.name,
+                    fileSize: file.size,
+                    fileType: file.type
+                });
                 
                 await uploadFileChunks(fileId, file);
             }
         }
 
         async function uploadFileChunks(fileId, file) {
-            const totalChunks = Math.ceil(file.size / uploadChunkSize);
+            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
             
             for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-                const start = chunkIndex * uploadChunkSize;
-                const end = Math.min(start + uploadChunkSize, file.size);
-                const chunk = file.slice(start, end);
+                const start = chunkIndex * CHUNK_SIZE;
+                const end = Math.min(start + CHUNK_SIZE, file.size);
+                const chunkBlob = file.slice(start, end);
                 
-                const arrayBuffer = await readChunk(chunk);
+                const arrayBuffer = await readChunk(chunkBlob);
                 
-                socket.emit('upload-chunk', {
+                // Send chunk with callback to track progress
+                socket.emit('file-chunk', {
                     fileId: fileId,
-                    fileName: file.name,
-                    fileSize: file.size,
-                    fileType: file.type,
-                    chunk: arrayBuffer,
+                    data: arrayBuffer,
                     chunkIndex: chunkIndex,
                     totalChunks: totalChunks
+                }, (response) => {
+                    if (response && response.success) {
+                        const upload = myUploads.get(fileId);
+                        if (upload) {
+                            upload.progress = response.progress;
+                            renderUploadsList();
+                        }
+                    }
                 });
                 
-                // Update progress locally
-                const progress = ((chunkIndex + 1) / totalChunks) * 100;
-                const upload = myUploads.get(fileId);
-                if (upload) {
-                    upload.progress = progress;
-                    renderUploadsList();
-                }
-                
                 // Small delay to prevent flooding
-                await new Promise(resolve => setTimeout(resolve, 5));
+                await new Promise(resolve => setTimeout(resolve, 10));
             }
         }
 
@@ -601,7 +608,7 @@
                     renderReceivedFiles();
                     showStatus(`Download complete: ${response.fileName}`, 'success');
                     
-                    // Trigger download automatically
+                    // Auto-download
                     const a = document.createElement('a');
                     a.href = url;
                     a.download = response.fileName;
@@ -623,8 +630,8 @@
             uploadsList.innerHTML = Array.from(myUploads.values()).map(upload => `
                 <div class="file-item">
                     <div class="file-info">
-                        <div class="file-name">${escapeHtml(upload.file.name)}</div>
-                        <div class="file-size">${formatBytes(upload.file.size)}</div>
+                        <div class="file-name">${escapeHtml(upload.fileName)}</div>
+                        <div class="file-size">${formatBytes(upload.fileSize)}</div>
                         <div class="progress-bar">
                             <div class="progress-fill" style="width: ${upload.progress}%"></div>
                         </div>
