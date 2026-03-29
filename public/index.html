@@ -767,4 +767,22 @@
         function formatBytes(b) { if (b === 0) return '0 Bytes'; const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(b) / Math.log(k)); return parseFloat((b / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]; }
         function escapeHtml(str) { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
 
-        window.downloadFile
+        window.downloadFileById = (fileId, fileName) => downloadFile(fileId, fileName);
+        window.saveFileAgain = (url, filename) => { const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => document.body.removeChild(a), 100); };
+
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.onclick = () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`${tab.dataset.tab}Tab`).classList.add('active');
+            };
+        });
+
+        connectBtn.onclick = connectToRoom;
+        roomKeyInput.onkeypress = (e) => { if (e.key === 'Enter') connectToRoom(); };
+
+        initSocket();
+    </script>
+</body>
+</html>
