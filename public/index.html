@@ -24,7 +24,6 @@
             padding: 20px;
         }
 
-        /* Header */
         .header {
             text-align: center;
             padding: 30px 20px;
@@ -42,7 +41,6 @@
             color: transparent;
         }
 
-        /* Cards */
         .card {
             background: #0f1535;
             border-radius: 16px;
@@ -58,7 +56,6 @@
             color: #4f9eff;
         }
 
-        /* Input groups */
         .input-group {
             display: flex;
             gap: 12px;
@@ -82,7 +79,6 @@
             box-shadow: 0 0 0 2px rgba(79, 158, 255, 0.1);
         }
 
-        /* Buttons */
         .btn {
             padding: 12px 24px;
             background: #1e2a4a;
@@ -117,13 +113,17 @@
             background: #10b981;
         }
 
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
         }
 
-        /* Status messages */
         .status {
             padding: 12px;
             border-radius: 8px;
@@ -149,7 +149,6 @@
             border-left: 3px solid #dc2626;
         }
 
-        /* File drop zone */
         .drop-zone {
             border: 2px dashed #1e2a4a;
             border-radius: 12px;
@@ -170,7 +169,6 @@
             margin-top: 12px;
         }
 
-        /* File list */
         .file-list {
             margin-top: 20px;
             max-height: 400px;
@@ -183,20 +181,16 @@
             border-radius: 8px;
             padding: 12px;
             margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
         }
 
         .file-info {
-            flex: 1;
+            margin-bottom: 8px;
         }
 
         .file-name {
             font-weight: 500;
             margin-bottom: 4px;
+            word-break: break-word;
         }
 
         .file-size {
@@ -205,31 +199,27 @@
         }
 
         .progress-bar {
-            width: 200px;
-            height: 4px;
+            width: 100%;
+            height: 6px;
             background: #1e2a4a;
-            border-radius: 2px;
+            border-radius: 3px;
             overflow: hidden;
-            margin-top: 8px;
+            margin: 8px 0;
         }
 
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, #4f9eff, #7c3aed);
-            transition: width 0.3s;
+            transition: width 0.3s ease;
+            width: 0%;
         }
 
         .file-actions {
             display: flex;
             gap: 8px;
+            margin-top: 8px;
         }
 
-        .file-actions button {
-            padding: 6px 12px;
-            font-size: 0.85rem;
-        }
-
-        /* Room info */
         .room-header {
             display: flex;
             justify-content: space-between;
@@ -257,7 +247,6 @@
             font-size: 0.9rem;
         }
 
-        /* Tabs */
         .tabs {
             display: flex;
             gap: 4px;
@@ -288,35 +277,25 @@
             display: block;
         }
 
-        /* Queue */
-        .queue-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px;
-            background: #0a0e27;
-            border-radius: 6px;
-            margin-bottom: 6px;
+        .upload-status {
+            font-size: 0.85rem;
+            color: #10b981;
+            margin-top: 4px;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .container {
                 padding: 12px;
             }
             
-            .file-item {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .progress-bar {
-                width: 100%;
-            }
-            
             .room-header {
                 flex-direction: column;
                 align-items: flex-start;
+            }
+            
+            .tab {
+                padding: 8px 12px;
+                font-size: 0.9rem;
             }
         }
     </style>
@@ -327,7 +306,6 @@
     </div>
 
     <div class="container">
-        <!-- Connection Panel -->
         <div id="connectionPanel" class="card">
             <h2>Connect to Room</h2>
             <div class="input-group">
@@ -337,7 +315,6 @@
             <div id="connectionStatus"></div>
         </div>
 
-        <!-- Main Interface (shown after connection) -->
         <div id="mainInterface" style="display: none;">
             <div class="card">
                 <div class="room-header">
@@ -355,7 +332,6 @@
                 <button class="tab" data-tab="received">Received Files</button>
             </div>
 
-            <!-- Send Tab -->
             <div id="sendTab" class="tab-content active">
                 <div class="card">
                     <h2>Drop Files Here or Click to Select</h2>
@@ -369,21 +345,20 @@
                 </div>
 
                 <div class="card">
-                    <h2>Upload Queue</h2>
-                    <div id="uploadQueue" class="file-list">
-                        <div style="text-align: center; color: #6b7280; padding: 20px;">No files in queue</div>
+                    <h2>My Uploads</h2>
+                    <div id="uploadsList" class="file-list">
+                        <div style="text-align: center; color: #6b7280; padding: 20px;">No uploads</div>
                     </div>
                 </div>
 
                 <div class="card">
-                    <h2>Available Files from Peers</h2>
+                    <h2>Available Files in Room</h2>
                     <div id="availableFiles" class="file-list">
                         <div style="text-align: center; color: #6b7280; padding: 20px;">No shared files</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Received Tab -->
             <div id="receivedTab" class="tab-content">
                 <div class="card">
                     <h2>Downloaded Files</h2>
@@ -399,11 +374,10 @@
     <script>
         let socket = null;
         let currentRoomKey = null;
-        let uploadQueue = [];
-        let activeUploads = new Map();
-        let availableFiles = new Map();
-        let receivedFiles = [];
-        let peerConnections = new Map();
+        let myUploads = new Map(); // fileId -> { file, progress, status }
+        let roomFiles = new Map(); // fileId -> metadata
+        let downloadedFiles = []; // array of { id, name, url, size }
+        let uploadChunkSize = 16384; // 16KB chunks
 
         // DOM elements
         const connectBtn = document.getElementById('connectBtn');
@@ -416,11 +390,10 @@
         const leaveRoomBtn = document.getElementById('leaveRoomBtn');
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
-        const uploadQueueDiv = document.getElementById('uploadQueue');
+        const uploadsList = document.getElementById('uploadsList');
         const availableFilesDiv = document.getElementById('availableFiles');
         const receivedFilesDiv = document.getElementById('receivedFiles');
 
-        // Initialize socket connection
         function initSocket() {
             socket = io();
             
@@ -430,33 +403,32 @@
 
             socket.on('peer-joined', (data) => {
                 updatePeerCount(data.clientsCount);
-                addSystemMessage(`Device joined the room`, 'info');
+                addSystemMessage('Device joined the room', 'info');
             });
 
             socket.on('peer-left', (data) => {
                 updatePeerCount(data.clientsCount);
-                addSystemMessage(`Device left the room`, 'info');
+                addSystemMessage('Device left the room', 'info');
             });
 
-            socket.on('file-metadata', (data) => {
-                availableFiles.set(data.fileId, {
-                    ...data,
-                    status: 'available'
-                });
+            socket.on('file-available', (data) => {
+                roomFiles.set(data.fileId, data);
                 renderAvailableFiles();
                 addSystemMessage(`New file available: ${data.fileName}`, 'success');
             });
 
-            socket.on('file-chunk', (data) => {
-                receiveFileChunk(data);
-            });
-
-            socket.on('file-request', (data) => {
-                handleFileRequest(data);
+            socket.on('upload-progress', (data) => {
+                if (myUploads.has(data.fileId)) {
+                    const upload = myUploads.get(data.fileId);
+                    upload.progress = data.progress;
+                    if (data.isComplete) {
+                        upload.status = 'complete';
+                    }
+                    renderUploadsList();
+                }
             });
         }
 
-        // Connect to room
         function connectToRoom() {
             const roomKey = roomKeyInput.value.trim();
             if (!roomKey) {
@@ -481,11 +453,19 @@
                     currentRoomKeyEl.textContent = roomKey;
                     updatePeerCount(response.clientsCount);
                     
+                    // Load existing files
+                    if (response.files && response.files.length > 0) {
+                        response.files.forEach(file => {
+                            roomFiles.set(file.fileId, file);
+                        });
+                        renderAvailableFiles();
+                    }
+                    
                     connectionPanel.style.display = 'none';
                     mainInterface.style.display = 'block';
                     
                     showStatus(`Connected to room: ${roomKey}`, 'success');
-                    addSystemMessage(`You joined the room as ${response.isCreator ? 'creator' : 'peer'}`, 'success');
+                    addSystemMessage(`You joined the room`, 'success');
                     
                     setupFileTransfer();
                 } else {
@@ -494,17 +474,15 @@
             });
         }
 
-        // Leave room
         leaveRoomBtn.onclick = () => {
             if (socket && currentRoomKey) {
                 socket.emit('leave-room');
                 socket.disconnect();
                 socket = null;
                 currentRoomKey = null;
-                uploadQueue = [];
-                activeUploads.clear();
-                availableFiles.clear();
-                receivedFiles = [];
+                myUploads.clear();
+                roomFiles.clear();
+                downloadedFiles = [];
                 
                 connectionPanel.style.display = 'block';
                 mainInterface.style.display = 'none';
@@ -515,9 +493,7 @@
             }
         };
 
-        // Setup file transfer handlers
         function setupFileTransfer() {
-            // Drop zone handlers
             dropZone.onclick = () => fileInput.click();
             
             dropZone.ondragover = (e) => {
@@ -533,83 +509,66 @@
                 e.preventDefault();
                 dropZone.classList.remove('drag-over');
                 const files = Array.from(e.dataTransfer.files);
-                addFilesToQueue(files);
+                uploadFiles(files);
             };
             
             fileInput.onchange = (e) => {
                 const files = Array.from(e.target.files);
-                addFilesToQueue(files);
+                uploadFiles(files);
                 fileInput.value = '';
             };
         }
 
-        // Add files to upload queue
-        function addFilesToQueue(files) {
+        async function uploadFiles(files) {
             for (let file of files) {
                 const fileId = generateFileId();
-                uploadQueue.push({
+                
+                myUploads.set(fileId, {
                     id: fileId,
                     file: file,
-                    status: 'pending',
-                    progress: 0
+                    progress: 0,
+                    status: 'uploading'
                 });
+                renderUploadsList();
                 
-                // Announce file to all peers
-                socket.emit('file-metadata', {
+                await uploadFileChunks(fileId, file);
+            }
+        }
+
+        async function uploadFileChunks(fileId, file) {
+            const totalChunks = Math.ceil(file.size / uploadChunkSize);
+            
+            for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+                const start = chunkIndex * uploadChunkSize;
+                const end = Math.min(start + uploadChunkSize, file.size);
+                const chunk = file.slice(start, end);
+                
+                const arrayBuffer = await readChunk(chunk);
+                
+                socket.emit('upload-chunk', {
                     fileId: fileId,
                     fileName: file.name,
                     fileSize: file.size,
-                    fileType: file.type
-                });
-            }
-            renderUploadQueue();
-            processQueue();
-        }
-
-        // Process upload queue
-        async function processQueue() {
-            for (let item of uploadQueue) {
-                if (item.status === 'pending') {
-                    await uploadFile(item);
-                }
-            }
-        }
-
-        // Upload file to all peers
-        async function uploadFile(queueItem) {
-            queueItem.status = 'uploading';
-            renderUploadQueue();
-            
-            const file = queueItem.file;
-            const chunkSize = 16384;
-            let offset = 0;
-            
-            while (offset < file.size) {
-                const chunk = file.slice(offset, offset + chunkSize);
-                const arrayBuffer = await readFileChunk(chunk);
-                
-                socket.emit('file-chunk', {
-                    fileId: queueItem.id,
+                    fileType: file.type,
                     chunk: arrayBuffer,
-                    offset: offset,
-                    isLast: offset + chunkSize >= file.size
+                    chunkIndex: chunkIndex,
+                    totalChunks: totalChunks
                 });
                 
-                offset += chunkSize;
-                queueItem.progress = (offset / file.size) * 100;
-                renderUploadQueue();
+                // Update progress locally
+                const progress = ((chunkIndex + 1) / totalChunks) * 100;
+                const upload = myUploads.get(fileId);
+                if (upload) {
+                    upload.progress = progress;
+                    renderUploadsList();
+                }
                 
                 // Small delay to prevent flooding
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await new Promise(resolve => setTimeout(resolve, 5));
             }
-            
-            queueItem.status = 'completed';
-            renderUploadQueue();
-            addSystemMessage(`Upload complete: ${file.name}`, 'success');
         }
 
-        // Read file chunk as ArrayBuffer
-        function readFileChunk(blob) {
+        function readChunk(blob) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
@@ -618,88 +577,67 @@
             });
         }
 
-        // Receive file chunk
-        let receivingFiles = new Map();
-        
-        function receiveFileChunk(data) {
-            if (!receivingFiles.has(data.fileId)) {
-                receivingFiles.set(data.fileId, {
-                    chunks: [],
-                    size: 0,
-                    fileName: null
-                });
-            }
+        function downloadFile(fileId, fileName) {
+            showStatus(`Downloading ${fileName}...`, 'info');
             
-            const fileData = receivingFiles.get(data.fileId);
-            fileData.chunks.push(data.chunk);
-            
-            if (data.isLast) {
-                // Find file name from available files
-                const fileInfo = availableFiles.get(data.fileId);
-                if (fileInfo) {
-                    fileData.fileName = fileInfo.fileName;
+            socket.emit('download-file', { fileId: fileId }, (response) => {
+                if (response.success) {
+                    // Convert base64 to blob
+                    const binaryString = atob(response.fileData);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    const blob = new Blob([bytes]);
+                    const url = URL.createObjectURL(blob);
+                    
+                    downloadedFiles.push({
+                        id: fileId,
+                        name: response.fileName,
+                        url: url,
+                        size: response.fileSize
+                    });
+                    
+                    renderReceivedFiles();
+                    showStatus(`Download complete: ${response.fileName}`, 'success');
+                    
+                    // Trigger download automatically
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = response.fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                } else {
+                    showStatus(`Download failed: ${response.error}`, 'error');
                 }
-                
-                // Assemble file
-                const blob = new Blob(fileData.chunks);
-                const url = URL.createObjectURL(blob);
-                
-                receivedFiles.push({
-                    id: data.fileId,
-                    name: fileData.fileName || `file_${data.fileId}`,
-                    url: url,
-                    size: blob.size
-                });
-                
-                renderReceivedFiles();
-                receivingFiles.delete(data.fileId);
-                addSystemMessage(`File received: ${fileData.fileName}`, 'success');
-            }
-        }
-
-        // Handle file request from peer
-        function handleFileRequest(data) {
-            const queueItem = uploadQueue.find(item => item.id === data.fileId);
-            if (queueItem && queueItem.file) {
-                uploadFile(queueItem);
-            }
-        }
-
-        // Request file from peer
-        function requestFile(fileId, peerId) {
-            socket.emit('request-file', {
-                fileId: fileId,
-                peerId: peerId
             });
         }
 
-        // Render functions
-        function renderUploadQueue() {
-            if (uploadQueue.length === 0) {
-                uploadQueueDiv.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No files in queue</div>';
+        function renderUploadsList() {
+            if (myUploads.size === 0) {
+                uploadsList.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No uploads</div>';
                 return;
             }
             
-            uploadQueueDiv.innerHTML = uploadQueue.map(item => `
+            uploadsList.innerHTML = Array.from(myUploads.values()).map(upload => `
                 <div class="file-item">
                     <div class="file-info">
-                        <div class="file-name">${escapeHtml(item.file.name)}</div>
-                        <div class="file-size">${formatBytes(item.file.size)}</div>
+                        <div class="file-name">${escapeHtml(upload.file.name)}</div>
+                        <div class="file-size">${formatBytes(upload.file.size)}</div>
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${item.progress}%"></div>
+                            <div class="progress-fill" style="width: ${upload.progress}%"></div>
                         </div>
-                    </div>
-                    <div class="file-actions">
-                        <span style="font-size: 0.85rem; color: #6b7280;">
-                            ${item.status === 'pending' ? 'Pending' : item.status === 'uploading' ? `${Math.round(item.progress)}%` : 'Complete'}
-                        </span>
+                        <div class="upload-status">
+                            ${upload.status === 'uploading' ? `Uploading: ${Math.round(upload.progress)}%` : 'Upload complete'}
+                        </div>
                     </div>
                 </div>
             `).join('');
         }
 
         function renderAvailableFiles() {
-            const files = Array.from(availableFiles.values());
+            const files = Array.from(roomFiles.values());
             if (files.length === 0) {
                 availableFilesDiv.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No shared files</div>';
                 return;
@@ -712,26 +650,30 @@
                         <div class="file-size">${formatBytes(file.fileSize)}</div>
                     </div>
                     <div class="file-actions">
-                        <button class="btn btn-primary" onclick="requestFile('${file.fileId}', '${file.senderId}')">Download</button>
+                        <button class="btn btn-primary btn-sm" onclick="window.downloadFileById('${file.fileId}', '${escapeHtml(file.fileName)}')">
+                            Download
+                        </button>
                     </div>
                 </div>
             `).join('');
         }
 
         function renderReceivedFiles() {
-            if (receivedFiles.length === 0) {
+            if (downloadedFiles.length === 0) {
                 receivedFilesDiv.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No files downloaded yet</div>';
                 return;
             }
             
-            receivedFilesDiv.innerHTML = receivedFiles.map(file => `
+            receivedFilesDiv.innerHTML = downloadedFiles.map(file => `
                 <div class="file-item">
                     <div class="file-info">
                         <div class="file-name">${escapeHtml(file.name)}</div>
                         <div class="file-size">${formatBytes(file.size)}</div>
                     </div>
                     <div class="file-actions">
-                        <button class="btn btn-success" onclick="downloadFile('${file.url}', '${escapeHtml(file.name)}')">Save</button>
+                        <button class="btn btn-success btn-sm" onclick="window.saveFile('${file.url}', '${escapeHtml(file.name)}')">
+                            Save Again
+                        </button>
                     </div>
                 </div>
             `).join('');
@@ -756,7 +698,6 @@
             console.log(`[${type}] ${message}`);
         }
 
-        // Utility functions
         function generateFileId() {
             return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         }
@@ -775,17 +716,17 @@
             return div.innerHTML;
         }
 
-        window.downloadFile = (url, filename) => {
+        window.downloadFileById = (fileId, fileName) => {
+            downloadFile(fileId, fileName);
+        };
+
+        window.saveFile = (url, filename) => {
             const a = document.createElement('a');
             a.href = url;
             a.download = filename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-        };
-
-        window.requestFile = (fileId, peerId) => {
-            requestFile(fileId, peerId);
         };
 
         // Tab switching
@@ -798,13 +739,11 @@
             };
         });
 
-        // Event listeners
         connectBtn.onclick = connectToRoom;
         roomKeyInput.onkeypress = (e) => {
             if (e.key === 'Enter') connectToRoom();
         };
 
-        // Initialize socket on page load
         initSocket();
     </script>
 </body>
