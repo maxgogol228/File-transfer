@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>File Transfer Hub</title>
+    <title>File Transfer Hub - Secure</title>
     <style>
         * {
             margin: 0;
@@ -48,6 +48,16 @@
         .chat-header h3 {
             color: #4f9eff;
             font-size: 1.1rem;
+        }
+
+        .users-list {
+            padding: 10px 16px;
+            border-bottom: 1px solid #1e2a4a;
+            font-size: 0.8rem;
+        }
+
+        .users-list span {
+            color: #10b981;
         }
 
         .chat-messages {
@@ -159,7 +169,6 @@
             }
         }
 
-        /* Rest of styles from previous version */
         .container {
             max-width: 100%;
         }
@@ -341,6 +350,15 @@
 
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+
+        .encryption-badge {
+            font-size: 0.7rem;
+            background: #10b981;
+            padding: 2px 8px;
+            border-radius: 12px;
+            display: inline-block;
+            margin-left: 8px;
+        }
     </style>
 </head>
 <body>
@@ -348,13 +366,14 @@
         <div class="main-content">
             <div class="container">
                 <div class="header">
-                    <h1>FILE TRANSFER HUB</h1>
+                    <h1>FILE TRANSFER HUB <span class="encryption-badge">AES-256</span></h1>
                 </div>
 
                 <div id="connectionPanel" class="card">
-                    <h2>Connect to Room</h2>
+                    <h2>Join Secure Room</h2>
                     <div class="input-group">
-                        <input type="text" id="roomKeyInput" placeholder="Enter room key" maxlength="20">
+                        <input type="text" id="userNameInput" placeholder="Your nickname" maxlength="20">
+                        <input type="text" id="roomKeyInput" placeholder="Room key" maxlength="20">
                         <button id="connectBtn" class="btn btn-primary">Join / Create</button>
                     </div>
                     <div id="connectionStatus"></div>
@@ -413,8 +432,9 @@
 
         <div class="chat-sidebar" id="chatSidebar" style="display: none;">
             <div class="chat-header">
-                <h3>Room Chat</h3>
+                <h3>Room Chat <span class="encryption-badge" style="font-size: 0.6rem;">encrypted</span></h3>
             </div>
+            <div class="users-list" id="usersList">Users: <span>--</span></div>
             <div class="chat-messages" id="chatMessages">
                 <div style="text-align: center; color: #6b7280; padding: 20px;">Join a room to start chatting</div>
             </div>
@@ -426,17 +446,21 @@
     </div>
 
     <script src="/socket.io/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script>
         let socket = null;
         let currentRoomKey = null;
+        let encryptionKey = null;
         let myUploads = new Map();
         let roomFiles = new Map();
         let downloadedFiles = [];
-        let userName = localStorage.getItem('chatUserName') || `User_${Math.random().toString(36).substr(2, 4)}`;
+        let userName = '';
         let timerInterval = null;
         const CHUNK_SIZE = 16384;
 
+        // DOM elements
         const connectBtn = document.getElementById('connectBtn');
+        const userNameInput = document.getElementById('userNameInput');
         const roomKeyInput = document.getElementById('roomKeyInput');
         const connectionStatus = document.getElementById('connectionStatus');
         const connectionPanel = document.getElementById('connectionPanel');
@@ -454,7 +478,111 @@
         const chatInput = document.getElementById('chatInput');
         const sendChatBtn = document.getElementById('sendChatBtn');
         const roomTimer = document.getElementById('roomTimer');
+        const usersList = document.getElementById('usersList');
 
+        // ============ CRYPTO FUNCTIONS ============
+        
+        // Derive encryption key from room key using PBKDF2 (complex math operation)
+        async function deriveEncryptionKey(roomKey, salt) {
+            // First transformation: reverse and add XOR operations
+            let transformed = '';
+            for (let i = 0; i < roomKey.length; i++) {
+                const charCode = roomKey.charCodeAt(i);
+                const reversedPos = roomKey.length - 1 - i;
+                const mixValue = (charCode ^ reversedPos) + (i * 7);
+                transformed += String.fromCharCode(mixValue % 256);
+            }
+            
+            // Second transformation: Fibonacci-based scrambling
+            let scrambled = '';
+            let a = 0, b = 1;
+            for (let i = 0; i < transformed.length; i++) {
+                const fib = (a + b) % 256;
+                a = b;
+                b = fib;
+                const charCode = transformed.charCodeAt(i);
+                scrambled += String.fromCharCode((charCode + fib) % 256);
+            }
+            
+            // Third transformation: Base64-like encoding with custom alphabet
+            const customAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+            let encoded = '';
+            for (let i = 0; i < scrambled.length; i++) {
+                const code = scrambled.charCodeAt(i);
+                encoded += customAlphabet[code % customAlphabet.length];
+                encoded += customAlphabet[(code >> 4) % customAlphabet.length];
+            }
+            
+            // Use PBKDF2 with 100000 iterations for final key
+            const finalKey = await crypto.subtle.importKey(
+                'raw',
+                new TextEncoder().encode(encoded + salt),
+                { name: 'PBKDF2' },
+                false,
+                ['deriveKey']
+            );
+            
+            const aesKey = await crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: new TextEncoder().encode(salt),
+                    iterations: 100000,
+                    hash: 'SHA-256'
+                },
+                finalKey,
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+            
+            return aesKey;
+        }
+        
+        // Generate random salt
+        function generateSalt() {
+            const salt = new Uint8Array(16);
+            crypto.getRandomValues(salt);
+            return Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        
+        // Encrypt data using AES-256-GCM
+        async function encryptData(data, key) {
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const encrypted = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: iv },
+                key,
+                data
+            );
+            return {
+                iv: Array.from(iv),
+                data: Array.from(new Uint8Array(encrypted))
+            };
+        }
+        
+        // Decrypt data using AES-256-GCM
+        async function decryptData(encryptedObj, key) {
+            const iv = new Uint8Array(encryptedObj.iv);
+            const data = new Uint8Array(encryptedObj.data);
+            const decrypted = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv: iv },
+                key,
+                data
+            );
+            return new Uint8Array(decrypted);
+        }
+        
+        // Initialize encryption with room key
+        async function initEncryption(roomKey) {
+            const salt = localStorage.getItem(`salt_${roomKey}`) || generateSalt();
+            if (!localStorage.getItem(`salt_${roomKey}`)) {
+                localStorage.setItem(`salt_${roomKey}`, salt);
+            }
+            encryptionKey = await deriveEncryptionKey(roomKey, salt);
+            return encryptionKey;
+        }
+
+        // ============ SOCKET FUNCTIONS ============
+        
         function initSocket() {
             socket = io();
             
@@ -465,20 +593,36 @@
 
             socket.on('peer-joined', (data) => {
                 updatePeerCount(data.clientsCount);
-                addChatMessage({ userName: 'System', message: data.message || 'User joined the room', isSystem: true });
+                updateUsersList(data.users);
+                addChatMessage({ userName: 'System', message: data.message, isSystem: true, timestamp: new Date().toISOString() });
             });
 
             socket.on('peer-left', (data) => {
                 updatePeerCount(data.clientsCount);
-                addChatMessage({ userName: 'System', message: data.message || 'User left the room', isSystem: true });
+                updateUsersList(data.users);
+                addChatMessage({ userName: 'System', message: data.message, isSystem: true, timestamp: new Date().toISOString() });
             });
 
-            socket.on('chat-message', (message) => {
-                addChatMessage(message);
+            socket.on('chat-message', async (encryptedMessage) => {
+                try {
+                    const decryptedData = await decryptData(encryptedMessage, encryptionKey);
+                    const message = JSON.parse(new TextDecoder().decode(decryptedData));
+                    addChatMessage(message);
+                } catch (e) {
+                    console.error('Failed to decrypt message:', e);
+                }
             });
 
-            socket.on('chat-history', (messages) => {
-                messages.forEach(msg => addChatMessage(msg));
+            socket.on('chat-history', async (encryptedHistory) => {
+                try {
+                    for (const encMsg of encryptedHistory) {
+                        const decryptedData = await decryptData(encMsg, encryptionKey);
+                        const message = JSON.parse(new TextDecoder().decode(decryptedData));
+                        addChatMessage(message);
+                    }
+                } catch (e) {
+                    console.error('Failed to decrypt history:', e);
+                }
             });
 
             socket.on('file-available', (data) => {
@@ -486,7 +630,7 @@
                     roomFiles.set(data.fileId, data);
                     renderAvailableFiles();
                     showStatus(`New file: ${data.fileName}`, 'success');
-                    addChatMessage({ userName: 'System', message: `New file available: ${data.fileName}`, isSystem: true });
+                    addChatMessage({ userName: 'System', message: `${data.senderName || 'User'} shared: ${data.fileName}`, isSystem: true, timestamp: new Date().toISOString() });
                 }
             });
 
@@ -501,21 +645,33 @@
 
             socket.on('room-expired', (data) => {
                 showStatus(data.message, 'error');
-                setTimeout(() => {
-                    if (socket && currentRoomKey) {
-                        leaveRoom();
-                    }
-                }, 3000);
+                setTimeout(() => leaveRoom(), 3000);
             });
         }
 
-        function connectToRoom() {
+        function updateUsersList(users) {
+            if (users && users.length) {
+                const names = users.map(u => u.name).join(', ');
+                usersList.innerHTML = `Users (${users.length}): <span>${escapeHtml(names)}</span>`;
+            }
+        }
+
+        async function connectToRoom() {
             const roomKey = roomKeyInput.value.trim();
+            const nick = userNameInput.value.trim();
+            
+            if (!nick) {
+                showStatus('Please enter your nickname', 'error');
+                return;
+            }
             if (!roomKey) {
                 showStatus('Please enter a room key', 'error');
                 return;
             }
-
+            
+            userName = nick;
+            localStorage.setItem('lastUserName', userName);
+            
             if (!socket) {
                 initSocket();
                 setTimeout(() => performJoin(roomKey), 500);
@@ -524,14 +680,18 @@
             }
         }
 
-        function performJoin(roomKey) {
+        async function performJoin(roomKey) {
             showStatus('Connecting...', 'info');
             
-            socket.emit('join-room', roomKey, (response) => {
+            // Initialize encryption before joining
+            await initEncryption(roomKey);
+            
+            socket.emit('join-room', { roomKey, userName }, async (response) => {
                 if (response.success) {
                     currentRoomKey = roomKey;
                     currentRoomKeyEl.textContent = roomKey;
                     updatePeerCount(response.clientsCount);
+                    updateUsersList(response.users);
                     
                     if (response.files && response.files.length > 0) {
                         response.files.forEach(file => roomFiles.set(file.fileId, file));
@@ -542,14 +702,9 @@
                     mainInterface.style.display = 'block';
                     chatSidebar.style.display = 'flex';
                     
-                    showStatus(`Connected to: ${roomKey}`, 'success');
+                    showStatus(`Connected to: ${roomKey} (AES-256 Encrypted)`, 'success');
                     setupFileTransfer();
                     startTimer(response.expiresIn);
-                    
-                    // Announce user join via chat
-                    setTimeout(() => {
-                        sendChatMessage(`${userName} joined the room`);
-                    }, 500);
                 } else if (response.error === 'Room expired') {
                     showStatus('Room has expired (1 hour limit). Create a new room.', 'error');
                 } else {
@@ -574,7 +729,7 @@
                             const minutes = Math.floor(remaining / 60000);
                             const seconds = Math.floor((remaining % 60000) / 1000);
                             roomTimer.textContent = `Expires: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-                            if (remaining < 300000) { // Less than 5 minutes
+                            if (remaining < 300000) {
                                 roomTimer.classList.add('warning');
                             }
                         }
@@ -586,32 +741,38 @@
             timerInterval = setInterval(updateTimer, 1000);
         }
 
-        function sendChatMessage(message) {
-            if (!socket || !currentRoomKey) return;
-            socket.emit('chat-message', {
+        async function sendChatMessage(message) {
+            if (!socket || !currentRoomKey || !encryptionKey) return;
+            
+            const messageData = {
                 userName: userName,
-                message: message
-            });
+                userId: socket.id,
+                message: message,
+                timestamp: new Date().toISOString()
+            };
+            
+            const encrypted = await encryptData(new TextEncoder().encode(JSON.stringify(messageData)), encryptionKey);
+            socket.emit('chat-message', encrypted);
         }
 
         function addChatMessage(message) {
             const messageDiv = document.createElement('div');
             messageDiv.className = 'chat-message';
-            if (!message.isSystem && message.userId === socket?.id?.slice(-6)) {
-                messageDiv.classList.add('own');
-            }
             
-            const sender = message.isSystem ? 'System' : (message.userName || 'User');
+            const isOwn = message.userId === socket?.id;
+            if (isOwn) messageDiv.classList.add('own');
+            
+            const time = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
             messageDiv.innerHTML = `
-                <div class="message-sender">${escapeHtml(sender)}</div>
+                <div class="message-sender">${escapeHtml(message.userName)}</div>
                 <div class="message-text">${escapeHtml(message.message)}</div>
-                <div class="message-time">${message.timestamp || new Date().toLocaleTimeString()}</div>
+                <div class="message-time">${time}</div>
             `;
             
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
             
-            // Keep only last 100 messages in DOM
             while (chatMessages.children.length > 100) {
                 chatMessages.removeChild(chatMessages.firstChild);
             }
@@ -623,6 +784,7 @@
                 socket.disconnect();
                 socket = null;
                 currentRoomKey = null;
+                encryptionKey = null;
                 myUploads.clear();
                 roomFiles.clear();
                 downloadedFiles = [];
@@ -681,7 +843,14 @@
             for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
                 const start = chunkIndex * CHUNK_SIZE;
                 const end = Math.min(start + CHUNK_SIZE, file.size);
-                const arrayBuffer = await readChunk(file.slice(start, end));
+                let arrayBuffer = await readChunk(file.slice(start, end));
+                
+                // Encrypt chunk before sending
+                if (encryptionKey) {
+                    const encrypted = await encryptData(arrayBuffer, encryptionKey);
+                    arrayBuffer = new TextEncoder().encode(JSON.stringify(encrypted)).buffer;
+                }
+                
                 socket.emit('file-chunk', { fileId, data: arrayBuffer, chunkIndex, totalChunks }, (response) => {
                     if (response?.success && myUploads.has(fileId)) {
                         myUploads.get(fileId).progress = response.progress;
@@ -701,15 +870,29 @@
             });
         }
 
-        function downloadFile(fileId, fileName) {
+        async function downloadFile(fileId, fileName) {
             showStatus(`Downloading ${fileName}...`, 'info');
-            socket.emit('download-file', { fileId }, (response) => {
+            socket.emit('download-file', { fileId }, async (response) => {
                 if (response.success) {
-                    const binaryString = atob(response.fileData);
+                    let fileData = response.fileData;
+                    
+                    // Decrypt if we have encryption key
+                    if (encryptionKey && fileData.startsWith('{"iv":')) {
+                        try {
+                            const encryptedObj = JSON.parse(fileData);
+                            const decrypted = await decryptData(encryptedObj, encryptionKey);
+                            fileData = btoa(String.fromCharCode.apply(null, decrypted));
+                        } catch (e) {
+                            console.error('Decryption failed:', e);
+                        }
+                    }
+                    
+                    const binaryString = atob(fileData);
                     const bytes = new Uint8Array(binaryString.length);
                     for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
                     const blob = new Blob([bytes]);
                     const url = URL.createObjectURL(blob);
+                    
                     downloadedFiles.push({ id: fileId, name: response.fileName, url, size: response.fileSize });
                     renderReceivedFiles();
                     showStatus(`Download complete: ${response.fileName}`, 'success');
@@ -780,7 +963,10 @@
         });
 
         connectBtn.onclick = connectToRoom;
-        roomKeyInput.onkeypress = (e) => { if (e.key === 'Enter') connectToRoom(); };
+        
+        // Load saved username
+        const savedName = localStorage.getItem('lastUserName');
+        if (savedName) userNameInput.value = savedName;
 
         initSocket();
     </script>
