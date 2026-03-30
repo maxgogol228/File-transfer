@@ -1,7 +1,7 @@
 {
   "name": "file-transfer-hub",
   "version": "2.0.0",
-  "description": "Secure multi-device file transfer system with AES-256 encryption",
+  "description": "Multi-device file transfer system with chat",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
