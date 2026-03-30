@@ -34,7 +34,7 @@ io.on('connection', (socket) => {
     
     if (!rooms.has(roomKey)) {
       rooms.set(roomKey, {
-        clients: new Map(), // socketId -> userName
+        clients: new Map(),
         files: new Map(),
         createdAt: now,
         expiresAt: now + ROOM_LIFETIME_MS,
@@ -73,7 +73,8 @@ io.on('connection', (socket) => {
         fileId: f.fileId,
         fileName: f.fileName,
         fileSize: f.fileSize,
-        fileType: f.fileType
+        fileType: f.fileType,
+        senderName: f.senderName
       }));
       
       socket.emit('chat-history', room.messages);
